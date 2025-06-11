@@ -5,5 +5,7 @@ if HAVE_GAUDI
    libuct_gaudi_la_SOURCES = \
        gaudi_init.c \
        gaudi_ep.c \
-       gaudi_iface.c
+       gaudi_iface.c \
+       gaudi_md.c \
+       gaudi_device.c
 endif
