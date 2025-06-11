@@ -8,6 +8,9 @@
 #
 
 SUBDIRS = . cuda ib rocm sm ugni ze
+if HAVE_GAUDI
+SUBDIRS += gaudi
+endif
 
 lib_LTLIBRARIES    = libuct.la
 libuct_la_CFLAGS   = $(BASE_CFLAGS) $(LT_CFLAGS)

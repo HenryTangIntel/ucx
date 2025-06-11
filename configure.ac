@@ -162,6 +162,8 @@ AC_DEFUN([UCX_DX_ENABLE_CHECK],
                        [AC_MSG_ERROR([--enable-doxygen-$1 was specified, but $1 tools were not found])],
                        [])])])
 
+
+
 #
 # Doxygen options
 #
@@ -198,6 +200,7 @@ AS_IF([test "x$with_docs_only" = xyes],
      AM_CONDITIONAL([HAVE_CUDA_STATIC], [false])
      AM_CONDITIONAL([HAVE_GDR_COPY], [false])
      AM_CONDITIONAL([HAVE_ROCM], [false])
+     AM_CONDITIONAL([HAVE_GAUDI], [false])
      AM_CONDITIONAL([HAVE_HIP], [false])
      AM_CONDITIONAL([HAVE_XPMEM], [false])
      AM_CONDITIONAL([HAVE_CMA], [false])
@@ -239,6 +242,8 @@ AS_IF([test "x$with_docs_only" = xyes],
      m4_include([config/m4/java.m4])
      m4_include([config/m4/cuda.m4])
      m4_include([config/m4/rocm.m4])
+     m4_include([config/m4/gaudi.m4])
+     CHECK_GAUDI
      m4_include([config/m4/ze.m4])
      m4_include([config/m4/gdrcopy.m4])
      m4_include([config/m4/mad.m4])
@@ -344,6 +349,7 @@ build_modules="${build_modules}${uct_cuda_modules}"
 build_modules="${build_modules}${ucm_modules}"
 build_modules="${build_modules}${ucx_perftest_modules}"
 build_modules="${build_modules}${uct_rocm_modules}"
+build_modules="${build_modules}${uct_gaudi_modules}"
 build_modules="${build_modules}${ucg_modules}"
 AC_SUBST([build_modules], [${build_modules}])
 AC_SUBST([build_bindings], [${build_bindings}])
@@ -419,6 +425,7 @@ AC_MSG_NOTICE([         UCS modules:   <$(echo ${ucs_modules}|tr ':' ' ') >])
 AC_MSG_NOTICE([         UCT modules:   <$(echo ${uct_modules}|tr ':' ' ') >])
 AC_MSG_NOTICE([        CUDA modules:   <$(echo ${uct_cuda_modules}|tr ':' ' ') >])
 AC_MSG_NOTICE([        ROCM modules:   <$(echo ${uct_rocm_modules}|tr ':' ' ') >])
+AC_MSG_NOTICE([       GAUDI modules:   <$(echo ${uct_gaudi_modules}|tr ':' ' ') >])
 AC_MSG_NOTICE([          IB modules:   <$(echo ${uct_ib_modules}|tr ':' ' ') >])
 AC_MSG_NOTICE([         UCM modules:   <$(echo ${ucm_modules}|tr ':' ' ') >])
 AC_MSG_NOTICE([        Perf modules:   <$(echo ${ucx_perftest_modules}|tr ':' ' ') >])
