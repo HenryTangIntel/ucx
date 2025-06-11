@@ -16,9 +16,9 @@
              # Allow user to specify Gaudi path
              AS_IF([test "x$with_gaudi" != xyes],
                    [GAUDI_LDFLAGS="-L$with_gaudi"
-                    GAUDI_CPPFLAGS="-I$with_gaudi/../include"],
-                   [GAUDI_LDFLAGS=""
-                    GAUDI_CPPFLAGS=""])
+                    GAUDI_CPPFLAGS="-I$with_gaudi/../include -I$with_gaudi/../include/habanalabs"],
+                   [GAUDI_LDFLAGS="-L/usr/lib/habanalabs"
+                    GAUDI_CPPFLAGS="-I/usr/include/habanalabs"])
 
              # Save original flags and append Gaudi-specific ones
              old_LDFLAGS="$LDFLAGS"
@@ -28,21 +28,22 @@
 
              # Check for Gaudi library (libhl-thunk)
              AC_CHECK_LIB([hl-thunk], [hlthunk_open],
-                          [AC_DEFINE([HAVE_GAUDI], [1], [Enable Gaudi support])
-                           uct_gaudi_modules=":gaudi"
-                           gaudi_enable=yes
-                           AC_SUBST([GAUDI_LIBS], [-lhl-thunk])
-                           AC_SUBST([GAUDI_CFLAGS], [$GAUDI_CPPFLAGS])],
+                          [
+                           # Library found, now check for header
+                           AC_CHECK_HEADER([hlthunk.h],
+                                          [AC_DEFINE([HAVE_GAUDI], [1], [Enable Gaudi support])
+                                           uct_gaudi_modules=":gaudi"
+                                           gaudi_enable=yes
+                                           AC_SUBST([GAUDI_LIBS], [-lhl-thunk])
+                                           AC_SUBST([GAUDI_CFLAGS], [$GAUDI_CPPFLAGS])
+                                           AC_SUBST([GAUDI_LDFLAGS], [$GAUDI_LDFLAGS])],
+                                          [AS_IF([test "x$with_gaudi" != xno && test "x$with_gaudi" != xyes],
+                                                 [AC_MSG_ERROR([Gaudi support requested but hlthunk.h not found])],
+                                                 [gaudi_enable=no])])
+                          ],
                           [AS_IF([test "x$with_gaudi" != xno && test "x$with_gaudi" != xyes],
                                  [AC_MSG_ERROR([Gaudi support requested but libhl-thunk not found in $with_gaudi])],
                                  [gaudi_enable=no])])
-
-             # Check for Gaudi headers
-             AC_CHECK_HEADER([hl-thunk.h],
-                             [],
-                             [AS_IF([test "x$with_gaudi" != xno && test "x$with_gaudi" != xyes],
-                                    [AC_MSG_ERROR([Gaudi support requested but hl-thunk.h not found])],
-                                    [gaudi_enable=no])])
 
              # Restore original flags
              LDFLAGS="$old_LDFLAGS"
