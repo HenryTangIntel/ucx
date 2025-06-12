@@ -7,7 +7,14 @@
 # See file LICENSE for terms.
 #
 
-SUBDIRS = . cuda ib rocm sm ugni ze
+SUBDIRS = . cuda ib rocm sm ugni ze 
+
+if HAVE_GAUDI
+	UCT_GAUDI_SOURCES = gaudi
+endif
+
+SUBDIRS + $(UCT_GAUDI_SUBDIRS)
+
 
 lib_LTLIBRARIES    = libuct.la
 libuct_la_CFLAGS   = $(BASE_CFLAGS) $(LT_CFLAGS)
@@ -15,6 +22,16 @@ libuct_la_CPPFLAGS = $(BASE_CPPFLAGS)
 libuct_la_LIBADD   = $(top_builddir)/src/ucs/libucs.la
 libuct_la_LDFLAGS  = -ldl -version-info $(SOVERSION)
 libuct_ladir       = $(includedir)/uct
+
+
+
+if HAVE_GAUDI
+	UCT_GAUDI_SOURCES = gaudi/gaudi_iface.c gaudi/gaudi_device.c gaudi/gaudi_ep.c
+	libuct_la_SOURCES += $(UCT_GAUDI_SOURCES)
+	libuct_la_CPPFLAGS += -I/opt/habanalabs/src
+	libuct_la_LDFLAGS += -L/opt/habanalabs/src/hl-thunk/build/lib 
+endif
+
 
 nobase_dist_libuct_la_HEADERS = \
 	api/tl.h \
