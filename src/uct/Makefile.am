@@ -24,11 +24,13 @@ libuct_ladir       = $(includedir)/uct
 
 
 if HAVE_GAUDI
-	UCT_GAUDI_SOURCES = gaudi/gaudi_iface.c gaudi/gaudi_device.c gaudi/gaudi_ep.c
-	libuct_la_SOURCES += $(UCT_GAUDI_SOURCES)
-	libuct_la_CPPFLAGS += -I/opt/habanalabs/src
-	libuct_la_LDFLAGS += -L/opt/habanalabs/src/hl-thunk/build/lib 
+    UCT_GAUDI_SOURCES = gaudi/gaudi_iface.c gaudi/gaudi_device.c gaudi/gaudi_ep.c
+    libuct_la_SOURCES += $(UCT_GAUDI_SOURCES)
+    libuct_la_CPPFLAGS += -I/usr/include/habanalabs
+    libuct_la_LDFLAGS += -L/usr/lib/habanalabs
+    libuct_la_LIBADD += gaudi/libuct_gaudi.la
 endif
+
 
 
 nobase_dist_libuct_la_HEADERS = \
