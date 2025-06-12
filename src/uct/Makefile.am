@@ -7,11 +7,7 @@
 # See file LICENSE for terms.
 #
 
-SUBDIRS = . cuda ib rocm sm ugni ze 
-
-if HAVE_GAUDI
-SUBDIRS += gaudi
-endif
+SUBDIRS = . cuda ib rocm sm ugni ze gaudi
 
 
 lib_LTLIBRARIES    = libuct.la
