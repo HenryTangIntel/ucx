@@ -10,10 +10,8 @@
 SUBDIRS = . cuda ib rocm sm ugni ze 
 
 if HAVE_GAUDI
-	UCT_GAUDI_SOURCES = gaudi
+	SUBDIRS += gaudi
 endif
-
-SUBDIRS + $(UCT_GAUDI_SUBDIRS)
 
 
 lib_LTLIBRARIES    = libuct.la
