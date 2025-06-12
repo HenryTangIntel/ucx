@@ -10,7 +10,7 @@
 SUBDIRS = . cuda ib rocm sm ugni ze 
 
 if HAVE_GAUDI
-	SUBDIRS += gaudi
+SUBDIRS += gaudi
 endif
 
 
@@ -23,13 +23,7 @@ libuct_ladir       = $(includedir)/uct
 
 
 
-if HAVE_GAUDI
-    UCT_GAUDI_SOURCES = gaudi/gaudi_iface.c gaudi/gaudi_device.c gaudi/gaudi_ep.c
-    libuct_la_SOURCES += $(UCT_GAUDI_SOURCES)
-    libuct_la_CPPFLAGS += -I/usr/include/habanalabs
-    libuct_la_LDFLAGS += -L/usr/lib/habanalabs
-    libuct_la_LIBADD += gaudi/libuct_gaudi.la
-endif
+
 
 
 
@@ -94,6 +88,14 @@ libuct_la_SOURCES = \
 	tcp/tcp_sockcm.c \
 	tcp/tcp_listener.c \
 	tcp/tcp_sockcm_ep.c
+
+if HAVE_GAUDI
+UCT_GAUDI_SOURCES = gaudi/gaudi_md.c 
+libuct_la_SOURCES += $(UCT_GAUDI_SOURCES)
+libuct_la_CPPFLAGS += -I/usr/include/habanalabs
+libuct_la_LDFLAGS += -L/usr/lib/habanalabs
+libuct_la_LIBADD += gaudi/libuct_gaudi.la
+endif
 
 PKG_CONFIG_NAME=uct
 
