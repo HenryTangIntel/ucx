@@ -85,12 +85,13 @@ libuct_la_SOURCES = \
 	tcp/tcp_listener.c \
 	tcp/tcp_sockcm_ep.c
 
+
 if HAVE_GAUDI
-UCT_GAUDI_SOURCES = gaudi/gaudi_md.c 
-libuct_la_SOURCES += $(UCT_GAUDI_SOURCES)
-libuct_la_CPPFLAGS += -I/usr/include/habanalabs
-libuct_la_LDFLAGS += -L/usr/lib/habanalabs
-libuct_la_LIBADD += gaudi/libuct_gaudi.la
+    UCT_GAUDI_SOURCES = gaudi/gaudi_md.c gaudi/gaudi_iface.c gaudi/gaudi_device.c gaudi/gaudi_ep.c
+    libuct_la_SOURCES += $(UCT_GAUDI_SOURCES)
+    libuct_la_CPPFLAGS += -I/opt/habanalabs/src/hl-thunk/src
+    libuct_la_LDFLAGS += -L/opt/habanalabs/src/hl-thunk/build/lib
+    libuct_la_LIBADD += gaudi/libuct_gaudi.la
 endif
 
 PKG_CONFIG_NAME=uct

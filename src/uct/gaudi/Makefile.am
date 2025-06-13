@@ -9,7 +9,7 @@ libuct_gaudi_la_CPPFLAGS = $(BASE_CPPFLAGS)
 libuct_gaudi_la_CFLAGS   = $(BASE_CFLAGS)
 libuct_gaudi_la_LDFLAGS  = $(MODULE_LDFLAGS)
 libuct_gaudi_la_LIBADD   = $(HLTHUNK_LIBS)
-libuct_gaudi_la_SOURCES  = gaudi_md.c
+libuct_gaudi_la_SOURCES  = gaudi_md.c gaudi_config.c gaudi_iface.c #
 
 include $(top_srcdir)/config/module.am
 

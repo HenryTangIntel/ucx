@@ -1,4 +1,7 @@
 #include "gaudi_md.h"
+extern ucs_config_field_t uct_gaudi_md_config_table[];
+#include <ucs/sys/math.h>
+#include <ucs/sys/math.h>
 #include <ucs/sys/string.h>
 #include <ucs/sys/sys.h>
 #include <ucs/debug/log.h>
@@ -15,10 +18,10 @@
 #define SZ_64K				0x00010000
 #define NOT_CONTIGUOUS      0
 
-static ucs_status_t uct_gaudi_mem_reg_internal(uct_md_h uct_md, void *address, size_t length,
+ ucs_status_t uct_gaudi_mem_reg_internal(uct_md_h uct_md, void *address, size_t length,
                                              int pg_align_addr, uct_gaudi_mem_t *mem_hndl);
 
-static void uct_gaudi_md_close(uct_md_h md)
+ void uct_gaudi_md_close(uct_md_h md)
 {
     uct_gaudi_md_t *gaudi_md = ucs_derived_of(md, uct_gaudi_md_t);
     
@@ -29,7 +32,7 @@ static void uct_gaudi_md_close(uct_md_h md)
 }
 
 
-static ucs_status_t uct_gaudi_md_query(uct_md_h uct_md, uct_md_attr_v2_t *md_attr)
+ ucs_status_t uct_gaudi_md_query(uct_md_h uct_md, uct_md_attr_v2_t *md_attr)
 {
     uct_gaudi_md_t *md = ucs_derived_of(uct_md, uct_gaudi_md_t);
 
@@ -53,7 +56,7 @@ static ucs_status_t uct_gaudi_md_query(uct_md_h uct_md, uct_md_attr_v2_t *md_att
     return UCS_OK;
 }
 
-static ucs_status_t
+ ucs_status_t
 uct_gaudi_mem_reg_internal(uct_md_h uct_md, void *address, size_t length,
                          int pg_align_addr, uct_gaudi_mem_t *mem_hndl)
 {
@@ -80,7 +83,7 @@ uct_gaudi_mem_reg_internal(uct_md_h uct_md, void *address, size_t length,
     return UCS_OK;
 }
 
-static ucs_status_t
+ ucs_status_t
 uct_gaudi_mem_reg(uct_md_h md, void *address, size_t length,
                 const uct_md_mem_reg_params_t *params, uct_mem_h *memh_p)
 {
@@ -103,7 +106,7 @@ uct_gaudi_mem_reg(uct_md_h md, void *address, size_t length,
     return UCS_OK;
 }
 
-static ucs_status_t uct_gaudi_mem_dereg(uct_md_h md, const uct_md_mem_dereg_params_t *params)
+ ucs_status_t uct_gaudi_mem_dereg(uct_md_h md, const uct_md_mem_dereg_params_t *params)
 {
     uct_gaudi_md_t *gaudi_md = ucs_derived_of(md, uct_gaudi_md_t);
     uct_gaudi_mem_t *mem_hndl = params->memh;
@@ -119,7 +122,7 @@ static ucs_status_t uct_gaudi_mem_dereg(uct_md_h md, const uct_md_mem_dereg_para
     return UCS_OK;
 }
 
-static ucs_status_t
+ ucs_status_t
 uct_gaudi_mem_alloc(uct_md_h md, size_t *length_p, void **address_p,
                   ucs_memory_type_t mem_type, ucs_sys_device_t sys_dev,
                   unsigned flags, const char *alloc_name,
@@ -170,7 +173,7 @@ uct_gaudi_mem_alloc(uct_md_h md, size_t *length_p, void **address_p,
     return UCS_OK;
 }
 
-static ucs_status_t uct_gaudi_mem_free(uct_md_h md, uct_mem_h memh)
+ ucs_status_t uct_gaudi_mem_free(uct_md_h md, uct_mem_h memh)
 {
     uct_gaudi_md_t *gaudi_md = ucs_derived_of(md, uct_gaudi_md_t);
     uct_gaudi_mem_t *mem_hndl = memh;
@@ -186,7 +189,7 @@ static ucs_status_t uct_gaudi_mem_free(uct_md_h md, uct_mem_h memh)
     return UCS_OK;
 }
 
-static ucs_status_t
+ ucs_status_t
 uct_gaudi_mkey_pack(uct_md_h uct_md, uct_mem_h memh, void *address,
                   size_t length, const uct_md_mkey_pack_params_t *params,
                   void *mkey_buffer)
@@ -201,7 +204,7 @@ uct_gaudi_mkey_pack(uct_md_h uct_md, uct_mem_h memh, void *address,
 }
 
 /*
-static ucs_status_t
+ ucs_status_t
 uct_gaudi_rcache_mem_reg_cb(void *context, ucs_rcache_t *rcache,
                           void *arg, ucs_rcache_region_t *rregion,
                           uint16_t rcache_mem_reg_flags)
@@ -275,7 +278,7 @@ ucs_status_t uct_gaudi_query_md_resources(uct_component_t *component,
     return UCS_OK;
 }
 
-static ucs_status_t uct_gaudi_rkey_unpack(uct_component_t *component, const void *rkey_buffer,
+ ucs_status_t uct_gaudi_rkey_unpack(uct_component_t *component, const void *rkey_buffer,
                                    const uct_rkey_unpack_params_t *params,
                                    uct_rkey_t *rkey_p, void **handle_p)
 {
