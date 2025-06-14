@@ -13,8 +13,14 @@ make distclean || true
 CPPFLAGS="-I/usr/include/habanalabs -I/usr/include/drm" \
 ./configure --with-gaudi=/usr "$@"
 
+
 # Build all targets with maximum parallelism
 make -j"$(nproc)"
+
+# Explicitly build Gaudi transport library (if present)
+if [ -d src/uct/gaudi ]; then
+    make -C src/uct/gaudi -j"$(nproc)"
+fi
 
 # Install to system (may require sudo)
 make install
