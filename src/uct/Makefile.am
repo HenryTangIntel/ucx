@@ -1,14 +1,8 @@
-#
-# Copyright (c) NVIDIA CORPORATION & AFFILIATES, 2001-2021. ALL RIGHTS RESERVED.
-# Copyright (c) UT-Battelle, LLC. 2014-2017. ALL RIGHTS RESERVED.
-# Copyright (c) The University of Tennesse and the University of Tennessee
-#               Research Foundation. 2016.  ALL RIGHTS RESERVED.
-# Copyright (C) Intel Corporation, 2023. ALL RIGHTS RESERVED.
-# See file LICENSE for terms.
-#
+SUBDIRS = . cuda ib rocm sm ugni ze
 
-SUBDIRS = . cuda ib rocm sm ugni ze gaudi
-
+if HAVE_GAUDI
+SUBDIRS += gaudi
+endif
 
 lib_LTLIBRARIES    = libuct.la
 libuct_la_CFLAGS   = $(BASE_CFLAGS) $(LT_CFLAGS)
@@ -16,12 +10,6 @@ libuct_la_CPPFLAGS = $(BASE_CPPFLAGS)
 libuct_la_LIBADD   = $(top_builddir)/src/ucs/libucs.la
 libuct_la_LDFLAGS  = -ldl -version-info $(SOVERSION)
 libuct_ladir       = $(includedir)/uct
-
-
-
-
-
-
 
 nobase_dist_libuct_la_HEADERS = \
 	api/tl.h \
@@ -52,7 +40,6 @@ noinst_HEADERS = \
 	tcp/tcp_sockcm.h \
 	tcp/tcp_listener.h \
 	tcp/tcp_sockcm_ep.h
-
 
 libuct_la_SOURCES = \
 	base/uct_md.c \
@@ -85,15 +72,9 @@ libuct_la_SOURCES = \
 	tcp/tcp_listener.c \
 	tcp/tcp_sockcm_ep.c
 
-
 if HAVE_GAUDI
-    UCT_GAUDI_SOURCES = gaudi/gaudi_md.c gaudi/gaudi_iface.c gaudi/gaudi_device.c gaudi/gaudi_ep.c
-    libuct_la_SOURCES += $(UCT_GAUDI_SOURCES)
-    libuct_la_CPPFLAGS += -I/opt/habanalabs/src/hl-thunk/src
-    libuct_la_LDFLAGS += -L/opt/habanalabs/src/hl-thunk/build/lib
-    libuct_la_LIBADD += gaudi/libuct_gaudi.la
+libuct_la_LIBADD += gaudi/libuct_gaudi.la
 endif
 
 PKG_CONFIG_NAME=uct
-
 include $(top_srcdir)/config/module-pkg-config.am

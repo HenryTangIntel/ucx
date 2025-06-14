@@ -370,6 +370,7 @@ AC_CONFIG_FILES([
                  debian/control
                  debian/changelog
                  src/ucp/Makefile
+                 src/uct/gaudi/Makefile
                  src/ucp/api/ucp_version.h
                  src/ucp/core/ucp_version.c
                  src/tools/vfs/Makefile

@@ -1,16 +1,14 @@
-#
-# Copyright (C) Habana Labs, Ltd. 2023. All Rights Reserved.
-#
+noinst_LTLIBRARIES = libuct_gaudi.la
 
-if HAVE_GAUDI
+libuct_gaudi_la_SOURCES = \
+    gaudi_device.c \
+    gaudi_config.c \
+    gaudi_md.c \
+    gaudi_iface.c \
+    gaudi_ep.c
 
-module_LTLIBRARIES      = libuct_gaudi.la
-libuct_gaudi_la_CPPFLAGS = $(BASE_CPPFLAGS)
-libuct_gaudi_la_CFLAGS   = $(BASE_CFLAGS)
-libuct_gaudi_la_LDFLAGS  = $(MODULE_LDFLAGS)
-libuct_gaudi_la_LIBADD   = $(HLTHUNK_LIBS)
-libuct_gaudi_la_SOURCES  = gaudi_md.c gaudi_config.c gaudi_iface.c #
+AM_CPPFLAGS = -I$(top_srcdir)/src \
+              -I/usr/include/habanalabs
 
-include $(top_srcdir)/config/module.am
-
-endif
+libuct_gaudi_la_LDFLAGS = -module -avoid-version -L/usr/lib/habanalabs
+libuct_gaudi_la_LIBADD = -lhl-thunk 

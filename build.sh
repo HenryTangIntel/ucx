@@ -1,10 +1,27 @@
-cd /workspace/ucx
-autoreconf -fiv
-./contrib/configure-devel --prefix=$PWD/install-debug \
-  CPPFLAGS="-I/usr/include/habanalabs -I/usr/include/libdrm" \
-  LDFLAGS="-L/usr/lib/habanalabs" \
-  --with-gaudi
+#!/bin/bash
+# UCX build script with Gaudi support (system habanalabs)
+# Usage: ./build.sh [configure options]
+set -euo pipefail
 
-make clean
-make -j
+# Clean previous build artifacts
+make distclean || true
+
+# Regenerate autotools files
+./autogen.sh
+
+# Configure with Gaudi support, using system habanalabs and drm includes/libs
+CPPFLAGS="-I/usr/include/habanalabs -I/usr/include/drm" \
+./configure --with-gaudi=/usr "$@"
+
+# Build all targets with maximum parallelism
+make -j"$(nproc)"
+
+# Install to system (may require sudo)
+make install
+
+# Build and run unittests (if available)
+make check || true
+
+echo "\nUCX build and install complete. Gaudi support enabled."
+echo "If you need to rebuild, just rerun this script."
 
