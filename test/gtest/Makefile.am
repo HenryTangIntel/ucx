@@ -211,7 +211,8 @@ gtest_SOURCES = \
 	ucs/test_log.cc \
 	ucs/test_iov.cc \
 	ucs/test_vfs.cc \
-	ucs/arch/test_x86_64.cc
+	ucs/arch/test_x86_64.cc \
+	uct/test_gaudi.cc
 
 if HAVE_IB
 gtest_SOURCES += \
