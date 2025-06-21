@@ -8,7 +8,7 @@ lib_LTLIBRARIES    = libuct.la
 libuct_la_CFLAGS   = $(BASE_CFLAGS) $(LT_CFLAGS)
 libuct_la_CPPFLAGS = $(BASE_CPPFLAGS)
 libuct_la_LIBADD   = $(top_builddir)/src/ucs/libucs.la
-libuct_la_LDFLAGS  = -ldl -version-info $(SOVERSION)
+libuct_la_LDFLAGS  = -ldl -version-info $(SOVERSION) -L$(top_builddir)/src/uct/gaudi/.libs
 libuct_ladir       = $(includedir)/uct
 
 nobase_dist_libuct_la_HEADERS = \
