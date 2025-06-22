@@ -1,0 +1,592 @@
+make  all-recursive
+make[1]: Entering directory '/app'
+Making all in src/ucm
+make[2]: Entering directory '/app/src/ucm'
+Making all in .
+make[3]: Entering directory '/app/src/ucm'
+  CC       event/libucm_la-event.lo
+  CC       malloc/libucm_la-malloc_hook.lo
+  CC       mmap/libucm_la-install.lo
+  CC       util/libucm_la-replace.lo
+  CC       util/libucm_la-log.lo
+  CC       util/libucm_la-reloc.lo
+  CC       util/libucm_la-sys.lo
+  CC       bistro/libucm_la-bistro.lo
+  CC       bistro/libucm_la-bistro_x86_64.lo
+  CC       bistro/libucm_la-bistro_aarch64.lo
+  CC       bistro/libucm_la-bistro_ppc64.lo
+  CC       bistro/libucm_la-bistro_rv64.lo
+  CC       ptmalloc286/libucm_la-malloc.lo
+  CCLD     libucm.la
+make[3]: Leaving directory '/app/src/ucm'
+Making all in cuda
+make[3]: Entering directory '/app/src/ucm/cuda'
+make[3]: Nothing to be done for 'all'.
+make[3]: Leaving directory '/app/src/ucm/cuda'
+Making all in rocm
+make[3]: Entering directory '/app/src/ucm/rocm'
+make[3]: Nothing to be done for 'all'.
+make[3]: Leaving directory '/app/src/ucm/rocm'
+Making all in ze
+make[3]: Entering directory '/app/src/ucm/ze'
+make[3]: Nothing to be done for 'all'.
+make[3]: Leaving directory '/app/src/ucm/ze'
+make[2]: Leaving directory '/app/src/ucm'
+Making all in src/ucs
+make[2]: Entering directory '/app/src/ucs'
+Making all in vfs/sock
+make[3]: Entering directory '/app/src/ucs/vfs/sock'
+  CC       libucs_vfs_sock_la-vfs_sock.lo
+  CCLD     libucs_vfs_sock.la
+make[3]: Leaving directory '/app/src/ucs/vfs/sock'
+Making all in .
+make[3]: Entering directory '/app/src/ucs'
+  CC       algorithm/libucs_la-crc.lo
+  CC       algorithm/libucs_la-qsort_r.lo
+  CC       algorithm/libucs_la-string_distance.lo
+  CC       arch/aarch64/libucs_la-cpu.lo
+  CC       arch/aarch64/libucs_la-global_opts.lo
+  CC       arch/ppc64/libucs_la-timebase.lo
+  CC       arch/ppc64/libucs_la-global_opts.lo
+  CC       arch/rv64/libucs_la-cpu.lo
+  CC       arch/rv64/libucs_la-global_opts.lo
+  CC       arch/x86_64/libucs_la-cpu.lo
+  CC       arch/x86_64/libucs_la-global_opts.lo
+  CC       arch/libucs_la-cpu.lo
+  CC       async/libucs_la-async.lo
+  CC       async/libucs_la-signal.lo
+  CC       async/libucs_la-pipe.lo
+  CC       async/libucs_la-eventfd.lo
+  CC       async/libucs_la-thread.lo
+  CC       config/libucs_la-global_opts.lo
+  CC       config/libucs_la-ucm_opts.lo
+  CC       config/libucs_la-ini.lo
+  CC       config/libucs_la-parser.lo
+  CC       datastruct/libucs_la-arbiter.lo
+  CC       datastruct/libucs_la-array.lo
+  CC       datastruct/libucs_la-bitmap.lo
+  CC       datastruct/libucs_la-callbackq.lo
+  CC       datastruct/libucs_la-frag_list.lo
+  CC       datastruct/libucs_la-lru.lo
+  CC       datastruct/libucs_la-mpmc.lo
+  CC       datastruct/libucs_la-mpool.lo
+  CC       datastruct/libucs_la-mpool_set.lo
+  CC       datastruct/libucs_la-pgtable.lo
+  CC       datastruct/libucs_la-piecewise_func.lo
+  CC       datastruct/libucs_la-ptr_array.lo
+  CC       datastruct/libucs_la-ptr_map.lo
+  CC       datastruct/libucs_la-strided_alloc.lo
+  CC       datastruct/libucs_la-string_buffer.lo
+  CC       datastruct/libucs_la-string_set.lo
+  CC       datastruct/libucs_la-usage_tracker.lo
+  CC       datastruct/libucs_la-conn_match.lo
+  CC       debug/libucs_la-assert.lo
+  CC       debug/libucs_la-debug.lo
+  CC       debug/libucs_la-log.lo
+  CC       debug/libucs_la-memtrack.lo
+  CC       memory/libucs_la-memory_type.lo
+  CC       memory/libucs_la-memtype_cache.lo
+  CC       memory/libucs_la-numa.lo
+  CC       memory/libucs_la-rcache.lo
+  CC       memory/libucs_la-rcache_vfs.lo
+  CC       profile/libucs_la-profile.lo
+  CC       stats/libucs_la-stats.lo
+  CC       sys/libucs_la-event_set.lo
+  CC       sys/libucs_la-init.lo
+  CC       sys/libucs_la-math.lo
+  CC       sys/libucs_la-module.lo
+  CC       sys/libucs_la-string.lo
+  CC       sys/libucs_la-sys.lo
+  CC       sys/libucs_la-iovec.lo
+  CC       sys/libucs_la-lib.lo
+  CC       sys/libucs_la-sock.lo
+  CC       sys/topo/base/libucs_la-topo.lo
+  CC       sys/libucs_la-stubs.lo
+  CC       sys/libucs_la-netlink.lo
+  CC       sys/libucs_la-uid.lo
+  CC       time/libucs_la-time.lo
+  CC       time/libucs_la-timer_wheel.lo
+  CC       time/libucs_la-timerq.lo
+  CC       type/libucs_la-class.lo
+  CC       type/libucs_la-status.lo
+  CC       type/libucs_la-spinlock.lo
+  CC       type/libucs_la-thread_mode.lo
+  CC       vfs/base/libucs_la-vfs_obj.lo
+  CC       vfs/base/libucs_la-vfs_cb.lo
+  CCLD     libucs.la
+copying selected object files to avoid basename conflicts...
+make[3]: Leaving directory '/app/src/ucs'
+Making all in vfs/fuse
+make[3]: Entering directory '/app/src/ucs/vfs/fuse'
+make[3]: Nothing to be done for 'all'.
+make[3]: Leaving directory '/app/src/ucs/vfs/fuse'
+Making all in signal
+make[3]: Entering directory '/app/src/ucs/signal'
+  CC       libucs_signal_la-signal.lo
+  CCLD     libucs_signal.la
+make[3]: Leaving directory '/app/src/ucs/signal'
+make[2]: Leaving directory '/app/src/ucs'
+Making all in src/uct
+make[2]: Entering directory '/app/src/uct'
+Making all in .
+make[3]: Entering directory '/app/src/uct'
+  CC       base/libuct_la-uct_md.lo
+  CC       base/libuct_la-uct_md_vfs.lo
+  CC       base/libuct_la-uct_mem.lo
+  CC       base/libuct_la-uct_component.lo
+  CC       base/libuct_la-uct_iface.lo
+  CC       base/libuct_la-uct_iface_vfs.lo
+  CC       base/libuct_la-uct_worker.lo
+  CC       base/libuct_la-uct_cm.lo
+  CC       base/libuct_la-uct_vfs_attr.lo
+  CC       sm/base/libuct_la-sm_ep.lo
+  CC       sm/base/libuct_la-sm_md.lo
+  CC       sm/base/libuct_la-sm_iface.lo
+  CC       sm/mm/base/libuct_la-mm_iface.lo
+  CC       sm/mm/base/libuct_la-mm_ep.lo
+  CC       sm/mm/base/libuct_la-mm_md.lo
+  CC       sm/mm/posix/libuct_la-mm_posix.lo
+  CC       sm/mm/sysv/libuct_la-mm_sysv.lo
+  CC       sm/scopy/base/libuct_la-scopy_iface.lo
+  CC       sm/scopy/base/libuct_la-scopy_ep.lo
+  CC       sm/self/libuct_la-self.lo
+  CC       tcp/libuct_la-tcp_ep.lo
+  CC       tcp/libuct_la-tcp_iface.lo
+  CC       tcp/libuct_la-tcp_md.lo
+  CC       tcp/libuct_la-tcp_net.lo
+  CC       tcp/libuct_la-tcp_cm.lo
+  CC       tcp/libuct_la-tcp_base.lo
+  CC       tcp/libuct_la-tcp_sockcm.lo
+  CC       tcp/libuct_la-tcp_listener.lo
+  CC       tcp/libuct_la-tcp_sockcm_ep.lo
+  CCLD     libuct.la
+make[3]: Leaving directory '/app/src/uct'
+Making all in cuda
+make[3]: Entering directory '/app/src/uct/cuda'
+make[4]: Entering directory '/app/src/uct/cuda'
+make[4]: Nothing to be done for 'all-am'.
+make[4]: Leaving directory '/app/src/uct/cuda'
+make[3]: Leaving directory '/app/src/uct/cuda'
+Making all in ib
+make[3]: Entering directory '/app/src/uct/ib'
+make[4]: Entering directory '/app/src/uct/ib'
+make[4]: Nothing to be done for 'all-am'.
+make[4]: Leaving directory '/app/src/uct/ib'
+make[3]: Leaving directory '/app/src/uct/ib'
+Making all in rocm
+make[3]: Entering directory '/app/src/uct/rocm'
+make[3]: Nothing to be done for 'all'.
+make[3]: Leaving directory '/app/src/uct/rocm'
+Making all in sm
+make[3]: Entering directory '/app/src/uct/sm'
+Making all in scopy
+make[4]: Entering directory '/app/src/uct/sm/scopy'
+Making all in cma
+make[5]: Entering directory '/app/src/uct/sm/scopy/cma'
+  CC       libuct_cma_la-cma_iface.lo
+  CC       libuct_cma_la-cma_ep.lo
+  CC       libuct_cma_la-cma_md.lo
+  CCLD     libuct_cma.la
+  LN       libuct_cma.la
+  LN       .libs/libuct_cma.so
+  LN       .libs/libuct_cma.so.0
+  LN       .libs/libuct_cma.so.0.0.0
+make[5]: Leaving directory '/app/src/uct/sm/scopy/cma'
+Making all in knem
+make[5]: Entering directory '/app/src/uct/sm/scopy/knem'
+make[5]: Nothing to be done for 'all'.
+make[5]: Leaving directory '/app/src/uct/sm/scopy/knem'
+make[5]: Entering directory '/app/src/uct/sm/scopy'
+make[5]: Nothing to be done for 'all-am'.
+make[5]: Leaving directory '/app/src/uct/sm/scopy'
+make[4]: Leaving directory '/app/src/uct/sm/scopy'
+Making all in mm
+make[4]: Entering directory '/app/src/uct/sm/mm'
+Making all in xpmem
+make[5]: Entering directory '/app/src/uct/sm/mm/xpmem'
+make[5]: Nothing to be done for 'all'.
+make[5]: Leaving directory '/app/src/uct/sm/mm/xpmem'
+make[5]: Entering directory '/app/src/uct/sm/mm'
+make[5]: Nothing to be done for 'all-am'.
+make[5]: Leaving directory '/app/src/uct/sm/mm'
+make[4]: Leaving directory '/app/src/uct/sm/mm'
+make[4]: Entering directory '/app/src/uct/sm'
+make[4]: Nothing to be done for 'all-am'.
+make[4]: Leaving directory '/app/src/uct/sm'
+make[3]: Leaving directory '/app/src/uct/sm'
+Making all in ugni
+make[3]: Entering directory '/app/src/uct/ugni'
+make[3]: Nothing to be done for 'all'.
+make[3]: Leaving directory '/app/src/uct/ugni'
+Making all in ze
+make[3]: Entering directory '/app/src/uct/ze'
+make[4]: Entering directory '/app/src/uct/ze'
+make[4]: Nothing to be done for 'all-am'.
+make[4]: Leaving directory '/app/src/uct/ze'
+make[3]: Leaving directory '/app/src/uct/ze'
+make[2]: Leaving directory '/app/src/uct'
+Making all in src/ucp
+make[2]: Entering directory '/app/src/ucp'
+  CC       am/libucp_la-eager_single.lo
+  CC       am/libucp_la-eager_multi.lo
+  CC       am/libucp_la-rndv.lo
+  CC       core/libucp_la-ucp_context.lo
+  CC       core/libucp_la-ucp_am.lo
+  CC       core/libucp_la-ucp_ep.lo
+  CC       core/libucp_la-ucp_ep_vfs.lo
+  CC       core/libucp_la-ucp_listener.lo
+  CC       core/libucp_la-ucp_mm.lo
+  CC       core/libucp_la-ucp_proxy_ep.lo
+  CC       core/libucp_la-ucp_request.lo
+  CC       core/libucp_la-ucp_rkey.lo
+  CC       core/libucp_la-ucp_version.lo
+  CC       core/libucp_la-ucp_vfs.lo
+  CC       core/libucp_la-ucp_worker.lo
+  CC       dt/libucp_la-datatype_iter.lo
+  CC       dt/libucp_la-dt_iov.lo
+  CC       dt/libucp_la-dt_generic.lo
+  CC       dt/libucp_la-dt.lo
+  CC       proto/libucp_la-lane_type.lo
+  CC       proto/libucp_la-proto_am.lo
+  CC       proto/libucp_la-proto_init.lo
+  CC       proto/libucp_la-proto_common.lo
+  CC       proto/libucp_la-proto_debug.lo
+  CC       proto/libucp_la-proto_perf.lo
+  CC       proto/libucp_la-proto_reconfig.lo
+  CC       proto/libucp_la-proto_multi.lo
+  CC       proto/libucp_la-proto_select.lo
+  CC       proto/libucp_la-proto_single.lo
+  CC       proto/libucp_la-proto.lo
+  CC       rma/libucp_la-amo_basic.lo
+  CC       rma/libucp_la-amo_offload.lo
+  CC       rma/libucp_la-amo_send.lo
+  CC       rma/libucp_la-amo_sw.lo
+  CC       rma/libucp_la-get_am.lo
+  CC       rma/libucp_la-get_offload.lo
+  CC       rma/libucp_la-put_am.lo
+  CC       rma/libucp_la-put_offload.lo
+  CC       rma/libucp_la-rma_basic.lo
+  CC       rma/libucp_la-rma_send.lo
+  CC       rma/libucp_la-rma_sw.lo
+  CC       rma/libucp_la-flush.lo
+  CC       rndv/libucp_la-proto_rndv.lo
+  CC       rndv/libucp_la-rndv_am.lo
+  CC       rndv/libucp_la-rndv_get.lo
+  CC       rndv/libucp_la-rndv_ppln.lo
+  CC       rndv/libucp_la-rndv_put.lo
+  CC       rndv/libucp_la-rndv_rtr.lo
+  CC       rndv/libucp_la-rndv_ats.lo
+  CC       rndv/libucp_la-rndv_rkey_ptr.lo
+  CC       rndv/libucp_la-rndv.lo
+  CC       stream/libucp_la-stream_multi.lo
+  CC       stream/libucp_la-stream_recv.lo
+  CC       stream/libucp_la-stream_send.lo
+  CC       tag/libucp_la-eager_multi.lo
+  CC       tag/libucp_la-eager_rcv.lo
+  CC       tag/libucp_la-eager_snd.lo
+  CC       tag/libucp_la-eager_single.lo
+  CC       tag/libucp_la-probe.lo
+  CC       tag/libucp_la-tag_rndv.lo
+  CC       tag/libucp_la-tag_match.lo
+  CC       tag/libucp_la-tag_recv.lo
+  CC       tag/libucp_la-tag_send.lo
+  CC       tag/libucp_la-offload.lo
+  CC       tag/offload/libucp_la-eager.lo
+  CC       tag/offload/libucp_la-rndv.lo
+  CC       wireup/libucp_la-address.lo
+  CC       wireup/libucp_la-ep_match.lo
+  CC       wireup/libucp_la-select.lo
+  CC       wireup/libucp_la-wireup_ep.lo
+  CC       wireup/libucp_la-wireup.lo
+  CC       wireup/libucp_la-wireup_cm.lo
+  CCLD     libucp.la
+copying selected object files to avoid basename conflicts...
+make[2]: Leaving directory '/app/src/ucp'
+Making all in src/tools/vfs
+make[2]: Entering directory '/app/src/tools/vfs'
+make[2]: Nothing to be done for 'all'.
+make[2]: Leaving directory '/app/src/tools/vfs'
+Making all in src/tools/info
+make[2]: Entering directory '/app/src/tools/info'
+/usr/bin/sed -nr 's:\s*#define\s+(\w+)(\s+(\w+)|\s+(".*")|\s*)$:{"\1", UCS_PP_MAKE_STRING(\3\4)},:p' <../../../config.h >build_config.h
+make  all-am
+make[3]: Entering directory '/app/src/tools/info'
+  CC       ucx_info-build_info.o
+  CC       ucx_info-proto_info.o
+  CC       ucx_info-sys_info.o
+  CC       ucx_info-tl_info.o
+  CC       ucx_info-type_info.o
+  CC       ucx_info-version_info.o
+  CC       ucx_info-ucx_info.o
+  CCLD     ucx_info
+make[3]: Leaving directory '/app/src/tools/info'
+make[2]: Leaving directory '/app/src/tools/info'
+Making all in src/tools/perf
+make[2]: Entering directory '/app/src/tools/perf'
+Making all in cuda
+make[3]: Entering directory '/app/src/tools/perf/cuda'
+make[3]: Nothing to be done for 'all'.
+make[3]: Leaving directory '/app/src/tools/perf/cuda'
+Making all in rocm
+make[3]: Entering directory '/app/src/tools/perf/rocm'
+make[3]: Nothing to be done for 'all'.
+make[3]: Leaving directory '/app/src/tools/perf/rocm'
+Making all in ze
+make[3]: Entering directory '/app/src/tools/perf/ze'
+make[3]: Nothing to be done for 'all'.
+make[3]: Leaving directory '/app/src/tools/perf/ze'
+Making all in lib
+make[3]: Entering directory '/app/src/tools/perf/lib'
+  CC       libucxperf_la-libperf.lo
+  CC       libucxperf_la-libperf_memory.lo
+  CC       libucxperf_la-libperf_thread.lo
+  CXX      libucxperf_la-uct_tests.lo
+  CXX      libucxperf_la-ucp_tests.lo
+  CXXLD    libucxperf.la
+make[3]: Leaving directory '/app/src/tools/perf/lib'
+Making all in mad
+make[3]: Entering directory '/app/src/tools/perf/mad'
+make[3]: Nothing to be done for 'all'.
+make[3]: Leaving directory '/app/src/tools/perf/mad'
+make[3]: Entering directory '/app/src/tools/perf'
+  CC       ucx_perftest-perftest_run.o
+  CC       ucx_perftest-perftest.o
+  CC       ucx_perftest-perftest_params.o
+  CC       ucx_perftest_daemon-perftest_daemon.o
+  CCLD     ucx_perftest
+  CCLD     ucx_perftest_daemon
+make[3]: Leaving directory '/app/src/tools/perf'
+make[2]: Leaving directory '/app/src/tools/perf'
+Making all in src/tools/profile
+make[2]: Entering directory '/app/src/tools/profile'
+  CC       ucx_read_profile-read_profile.o
+  CCLD     ucx_read_profile
+make[2]: Leaving directory '/app/src/tools/profile'
+Making all in bindings/go
+make[2]: Entering directory '/app/bindings/go'
+cd /app/bindings/go/src/examples/perftest ;\
+go build --tags= -o /app/bindings/go/.libs/tmp/goperftest
+cd /app/bindings/go/src/ucx ;\
+go build
+make[2]: Leaving directory '/app/bindings/go'
+Making all in bindings/java
+make[2]: Entering directory '/app/bindings/java'
+Making all in src/main/native
+make[3]: Entering directory '/app/bindings/java/src/main/native'
+mvn -B -T 1C -f /app/bindings/java/pom.xml -Dmaven.repo.local=./build-java/.deps -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn compile
+[INFO] Scanning for projects...
+[INFO] Inspecting build with total of 1 modules...
+[INFO] Installing Nexus Staging features:
+[INFO]   ... total of 1 executions of maven-deploy-plugin replaced with nexus-staging-maven-plugin
+[INFO]
+[INFO] Using the MultiThreadedBuilder implementation with a thread count of 4
+[INFO]
+[INFO] --------------------------< org.openucx:jucx >--------------------------
+[INFO] Building jucx 1.20.0
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO]
+[INFO] --- checkstyle:3.1.0:check (validate) @ jucx ---
+[INFO] Starting audit...
+Audit done.
+[INFO]
+[INFO] --- resources:2.7:copy-resources (copy-dynamic-libs) @ jucx ---
+[INFO] Using 'UTF-8' encoding to copy filtered resources.
+[INFO] skip non existing resourceDirectory /app/bindings/java/src/main/native/.libs
+[INFO] Copying 1 resource
+[INFO] Copying 2 resources
+[INFO] Copying 1 resource
+[INFO] Copying 1 resource
+[INFO]
+[INFO] --- resources:2.7:resources (default-resources) @ jucx ---
+[INFO] Using 'UTF-8' encoding to copy filtered resources.
+[INFO] Copying 0 resource
+[INFO]
+[INFO] --- compiler:3.8.1:compile (default-compile) @ jucx ---
+[INFO] Changes detected - recompiling the module!
+[INFO] Compiling 31 source files to /app/bindings/java/src/main/native/build-java/classes
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  50.926 s (Wall Clock)
+[INFO] Finished at: 2025-06-22T04:28:22Z
+[INFO] ------------------------------------------------------------------------
+touch native_headers.stamp
+make  all-am
+make[4]: Entering directory '/app/bindings/java/src/main/native'
+  CXX      libjucx_la-context.lo
+  CXX      libjucx_la-endpoint.lo
+  CXX      libjucx_la-jucx_common_def.lo
+  CXX      libjucx_la-listener.lo
+  CXX      libjucx_la-memory.lo
+  CXX      libjucx_la-ucp_constants.lo
+  CXX      libjucx_la-ucs_constants.lo
+  CXX      libjucx_la-worker.lo
+  CXXLD    libjucx.la
+cp .libs/libjucx.so .libs/libjucx_amd64.so
+mvn -B -T 1C -f /app/bindings/java/pom.xml -Dmaven.repo.local=./build-java/.deps -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn package -DskipTests -Djar.finalName=jucx-1.20.0
+[INFO] Scanning for projects...
+[INFO] Inspecting build with total of 1 modules...
+[INFO] Installing Nexus Staging features:
+[INFO]   ... total of 1 executions of maven-deploy-plugin replaced with nexus-staging-maven-plugin
+[INFO]
+[INFO] Using the MultiThreadedBuilder implementation with a thread count of 4
+[INFO]
+[INFO] --------------------------< org.openucx:jucx >--------------------------
+[INFO] Building jucx 1.20.0
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO]
+[INFO] --- checkstyle:3.1.0:check (validate) @ jucx ---
+[INFO] Starting audit...
+Audit done.
+[INFO]
+[INFO] --- resources:2.7:copy-resources (copy-dynamic-libs) @ jucx ---
+[INFO] Using 'UTF-8' encoding to copy filtered resources.
+[INFO] Copying 2 resources
+[INFO] Copying 1 resource
+[INFO] Copying 2 resources
+[INFO] Copying 1 resource
+[INFO] Copying 1 resource
+[INFO]
+[INFO] --- resources:2.7:resources (default-resources) @ jucx ---
+[INFO] Using 'UTF-8' encoding to copy filtered resources.
+[INFO] Copying 1 resource
+[INFO]
+[INFO] --- compiler:3.8.1:compile (default-compile) @ jucx ---
+[INFO] Nothing to compile - all classes are up to date
+[INFO]
+[INFO] --- resources:2.7:testResources (default-testResources) @ jucx ---
+[INFO] Using 'UTF-8' encoding to copy filtered resources.
+[INFO] Copying 7 resources
+[INFO]
+[INFO] --- compiler:3.8.1:testCompile (default-testCompile) @ jucx ---
+[INFO] Changes detected - recompiling the module!
+[INFO] Compiling 7 source files to /app/bindings/java/src/main/native/build-java/test-classes
+[INFO]
+[INFO] --- surefire:3.2.5:test (default-test) @ jucx ---
+[INFO] Tests are skipped.
+[INFO]
+[INFO] --- jar:3.4.1:jar (default-jar) @ jucx ---
+[INFO] Building jar: /app/bindings/java/src/main/native/build-java/jucx-1.20.0.jar
+[INFO]
+[INFO] --- source:3.1.0:jar-no-fork (attach-sources) @ jucx ---
+[INFO] Building jar: /app/bindings/java/src/main/native/build-java/jucx-1.20.0-sources.jar
+[INFO]
+[INFO] --- javadoc:3.2.0:jar (attach-javadocs) @ jucx ---
+[INFO] No previous run data found, generating javadoc.
+[INFO] Building jar: /app/bindings/java/src/main/native/build-java/jucx-1.20.0-javadoc.jar
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  35.648 s (Wall Clock)
+[INFO] Finished at: 2025-06-22T04:29:01Z
+[INFO] ------------------------------------------------------------------------
+jar tf ./build-java/jucx-1.20.0.jar
+META-INF/
+META-INF/MANIFEST.MF
+org/
+org/openucx/
+org/openucx/jucx/
+org/openucx/jucx/ucp/
+org/openucx/jucx/examples/
+org/openucx/jucx/ucs/
+META-INF/maven/
+META-INF/maven/org.openucx/
+META-INF/maven/org.openucx/jucx/
+libjucx_amd64.so
+org/openucx/jucx/ucp/UcpRequest.class
+org/openucx/jucx/ucp/UcpRequestParams.class
+org/openucx/jucx/ucp/UcpListener.class
+org/openucx/jucx/ucp/UcpEndpointErrorHandler.class
+org/openucx/jucx/ucp/UcpWorkerParams.class
+org/openucx/jucx/ucp/UcpParams.class
+org/openucx/jucx/ucp/UcpWorker.class
+org/openucx/jucx/ucp/UcpMemory.class
+org/openucx/jucx/ucp/UcpContext.class
+org/openucx/jucx/ucp/UcpEndpointParams.class
+org/openucx/jucx/ucp/UcpTagMessage.class
+org/openucx/jucx/ucp/UcpAmRecvCallback.class
+org/openucx/jucx/ucp/UcpMemPackParams.class
+org/openucx/jucx/ucp/UcpMemMapParams.class
+org/openucx/jucx/ucp/UcpListenerParams.class
+org/openucx/jucx/ucp/UcpListenerConnectionHandler.class
+org/openucx/jucx/ucp/UcpRemoteKey.class
+org/openucx/jucx/ucp/UcpAmData.class
+org/openucx/jucx/ucp/UcpEndpoint.class
+org/openucx/jucx/ucp/UcpConnectionRequest.class
+org/openucx/jucx/ucp/UcpConstants.class
+org/openucx/jucx/NativeLibs.class
+org/openucx/jucx/UcxNativeStruct.class
+org/openucx/jucx/examples/UcxReadBWBenchmarkSender.class
+org/openucx/jucx/examples/UcxReadBWBenchmarkReceiver$1.class
+org/openucx/jucx/examples/UcxReadBWBenchmarkReceiver.class
+org/openucx/jucx/examples/UcxBenchmark.class
+org/openucx/jucx/ucs/UcsConstants$MEMORY_TYPE.class
+org/openucx/jucx/ucs/UcsConstants$ThreadMode.class
+org/openucx/jucx/ucs/UcsConstants$STATUS.class
+org/openucx/jucx/ucs/UcsConstants.class
+org/openucx/jucx/UcxCallback.class
+org/openucx/jucx/UcxParams.class
+org/openucx/jucx/UcxException.class
+org/openucx/jucx/UcxUtils.class
+META-INF/maven/org.openucx/jucx/pom.xml
+META-INF/maven/org.openucx/jucx/pom.properties
+make[4]: Leaving directory '/app/bindings/java/src/main/native'
+make[3]: Leaving directory '/app/bindings/java/src/main/native'
+make[3]: Entering directory '/app/bindings/java'
+make[3]: Nothing to be done for 'all-am'.
+make[3]: Leaving directory '/app/bindings/java'
+make[2]: Leaving directory '/app/bindings/java'
+Making all in test/apps
+make[2]: Entering directory '/app/test/apps'
+Making all in profiling
+make[3]: Entering directory '/app/test/apps/profiling'
+  CC       ucx_profiling-ucx_profiling.o
+  CCLD     ucx_profiling
+make[3]: Leaving directory '/app/test/apps/profiling'
+Making all in iodemo
+make[3]: Entering directory '/app/test/apps/iodemo'
+  CXX      io_demo-ucx_wrapper.o
+  CXX      io_demo-io_demo.o
+  CXXLD    io_demo
+make[3]: Leaving directory '/app/test/apps/iodemo'
+make[3]: Entering directory '/app/test/apps'
+  CC       test_ucp_dlopen-test_ucp_dlopen.o
+  CC       test_ucp_config-test_ucp_config.o
+  CC       test_ucs_dlopen-test_ucs_dlopen.o
+  CC       test_link_map-test_link_map.o
+  CC       test_dlopen_cfg_print-test_dlopen_cfg_print.o
+  CC       test_init_mt-test_init_mt.o
+  CC       test_memtrack_limit-test_memtrack_limit.o
+  CC       test_hooks-test_hooks.o
+  CCLD     test_ucp_dlopen
+  CCLD     test_ucp_config
+  CCLD     test_ucs_dlopen
+  CCLD     test_link_map
+  CCLD     test_dlopen_cfg_print
+  CCLD     test_init_mt
+  CCLD     test_memtrack_limit
+  CCLD     test_hooks
+make[3]: Leaving directory '/app/test/apps'
+make[2]: Leaving directory '/app/test/apps'
+Making all in examples
+make[2]: Entering directory '/app/examples'
+  CC       ucp_hello_world-ucp_hello_world.o
+  CC       uct_hello_world-uct_hello_world.o
+  CC       ucp_client_server-ucp_client_server.o
+  CCLD     ucp_hello_world
+  CCLD     ucp_client_server
+  CCLD     uct_hello_world
+make[2]: Leaving directory '/app/examples'
+Making all in cmake
+make[2]: Entering directory '/app/cmake'
+make[2]: Nothing to be done for 'all'.
+make[2]: Leaving directory '/app/cmake'
+Making all in config
+make[2]: Entering directory '/app/config'
+make[2]: Nothing to be done for 'all'.
+make[2]: Leaving directory '/app/config'
+make[2]: Entering directory '/app'
+make[2]: Leaving directory '/app'
+make[1]: Leaving directory '/app'

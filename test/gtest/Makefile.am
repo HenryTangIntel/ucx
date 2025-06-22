@@ -69,6 +69,10 @@ gtest_LDADD = \
 	common/googletest/libgtest.la \
 	$(OPENMP_CFLAGS) \
 	$(GTEST_LIBS)
+if HAVE_GAUDI
+gtest_LDADD += \
+	$(top_builddir)/src/uct/gaudi/libuct_gaudi.la
+endif
 
 
 gtest_CPPFLAGS = \
@@ -91,6 +95,14 @@ gtest_CFLAGS   = $(BASE_CFLAGS)
 gtest_CXXFLAGS = \
 	$(BASE_CXXFLAGS) $(GTEST_CXXFLAGS) -std=c++11 \
 	-DGTEST_UCM_HOOK_LIB_DIR="\"${abs_builddir}/ucm/test_dlopen/.libs\""
+
+UCT_GAUDI_TEST_SOURCES =
+if HAVE_GAUDI
+UCT_GAUDI_TEST_SOURCES += \
+	uct/gaudi/test_uct_gaudi.cc
+gtest_CPPFLAGS += \
+	-I$(top_srcdir)/src/uct/gaudi # For uapi/hlthunk.h via gaudi_md.h etc.
+endif
 
 gtest_SOURCES = \
 	common/main.cc \
@@ -139,6 +151,7 @@ gtest_SOURCES = \
 	uct/test_sockaddr.cc \
 	uct/test_tag.cc \
 	uct/tcp/test_tcp.cc \
+	uct/gaudi/test_uct_gaudi.cc \
 	\
 	ucp/test_ucp_am.cc \
 	ucp/test_ucp_ep.cc \
@@ -211,7 +224,8 @@ gtest_SOURCES = \
 	ucs/test_log.cc \
 	ucs/test_iov.cc \
 	ucs/test_vfs.cc \
-	ucs/arch/test_x86_64.cc
+	ucs/arch/test_x86_64.cc \
+	$(UCT_GAUDI_TEST_SOURCES)
 
 if HAVE_IB
 gtest_SOURCES += \
@@ -275,6 +289,10 @@ gtest_LDADD += \
 	$(CUDA_LIBS) $(CUDART_LIBS) $(NVML_LIBS) \
 	$(top_builddir)/src/uct/cuda/libuct_cuda.la
 endif
+
+# Note: UCT_GAUDI_TEST_SOURCES already added to gtest_SOURCES
+# Adding to EXTRA_DIST for completeness if it's conditionally included
+EXTRA_DIST += $(UCT_GAUDI_TEST_SOURCES)
 
 if HAVE_HIP
 if HAVE_GNUXX11

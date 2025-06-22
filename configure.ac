@@ -229,6 +229,7 @@ AS_IF([test "x$with_docs_only" = xyes],
      AM_CONDITIONAL([HAVE_GCOV], [false])
      AM_CONDITIONAL([HAVE_LCOV], [false])
      AM_CONDITIONAL([HAVE_ZE], [false])
+     AM_CONDITIONAL([HAVE_GAUDI], [false])
     ],
     [
      AM_CONDITIONAL([DOCS_ONLY], [false])
@@ -243,11 +244,14 @@ AS_IF([test "x$with_docs_only" = xyes],
      m4_include([config/m4/rocm.m4])
      m4_include([config/m4/ze.m4])
      m4_include([config/m4/gdrcopy.m4])
+     m4_include([src/uct/gaudi/configure.m4])
      m4_include([config/m4/mad.m4])
      m4_include([config/m4/lcov.m4])
      m4_include([src/ucm/configure.m4])
+     m4_include([src/ucm/gaudi/configure.m4]) # Add UCM Gaudi check
      m4_include([src/ucs/configure.m4])
      m4_include([src/uct/configure.m4])
+     UCX_UCT_GAUDI_CHECK() # Check for Gaudi support
      m4_include([src/tools/perf/configure.m4])
      m4_include([test/gtest/configure.m4])
      m4_include([test/apps/iodemo/configure.m4])
@@ -423,6 +427,9 @@ AC_MSG_NOTICE([         UCS modules:   <$(echo ${ucs_modules}|tr ':' ' ') >])
 AC_MSG_NOTICE([         UCT modules:   <$(echo ${uct_modules}|tr ':' ' ') >])
 AC_MSG_NOTICE([        CUDA modules:   <$(echo ${uct_cuda_modules}|tr ':' ' ') >])
 AC_MSG_NOTICE([        ROCM modules:   <$(echo ${uct_rocm_modules}|tr ':' ' ') >])
+AS_IF([test "x$with_gaudi" != "xno" && test "x$gaudi_status" != "xno (not found)" && test "x$gaudi_status" != "xno (not checked)"], [
+AC_MSG_NOTICE([       Gaudi modules:   <$(echo ${uct_gaudi_modules}|tr ':' ' ') >]) # uct_gaudi_modules needs to be set in gaudi/configure.m4
+])
 AC_MSG_NOTICE([          IB modules:   <$(echo ${uct_ib_modules}|tr ':' ' ') >])
 AC_MSG_NOTICE([         UCM modules:   <$(echo ${ucm_modules}|tr ':' ' ') >])
 AC_MSG_NOTICE([        Perf modules:   <$(echo ${ucx_perftest_modules}|tr ':' ' ') >])
