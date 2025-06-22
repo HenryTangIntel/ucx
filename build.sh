@@ -3,11 +3,8 @@
 # Usage: ./build.sh [configure options]
 set -euo pipefail
 
-# Clean previous build artifacts
-make distclean || true
-
 # Regenerate autotools files
-./autogen.sh
+autoreconf -v --install -I src/ucm/rocm -I src/uct/gaudi -I config/m4 || exit 1
 
 # Configure with Gaudi support, using system habanalabs and drm includes/libs
 CPPFLAGS="-I/usr/include/habanalabs -I/usr/include/drm" \
@@ -23,7 +20,7 @@ if [ -d src/uct/gaudi ]; then
 fi
 
 # Install to system (may require sudo)
-make install
+sudo make install
 
 # Build and run unittests (if available)
 make check || true

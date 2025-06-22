@@ -38,18 +38,18 @@ ucs_status_t uct_gaudi_iface_query(uct_iface_h tl_iface, uct_iface_attr_t *iface
 
 
 static uct_iface_ops_t uct_gaudi_iface_ops = {
-    .ep_create        = uct_gaudi_ep_create,
+    .ep_create        = (uct_ep_create_func_t)uct_gaudi_ep_create,
     .ep_destroy       = uct_gaudi_ep_destroy,
     .ep_put_short     = uct_gaudi_ep_put_short,
-    .ep_get_short     = uct_gaudi_ep_get_short,
+    .ep_get_short     = (uct_ep_get_short_func_t)uct_gaudi_ep_get_short,
     .ep_put_bcopy     = uct_gaudi_ep_put_bcopy,
-    .ep_get_bcopy     = uct_gaudi_ep_get_bcopy,
+    .ep_get_bcopy     = (uct_ep_get_bcopy_func_t)uct_gaudi_ep_get_bcopy,
     .ep_am_short      = uct_gaudi_ep_am_short,
     .ep_am_bcopy      = uct_gaudi_ep_am_bcopy,
     .ep_am_zcopy      = uct_gaudi_ep_am_zcopy,
     .ep_pending_add   = uct_gaudi_ep_pending_add,
     .ep_pending_purge = uct_gaudi_ep_pending_purge,
-    .ep_flush         = uct_gaudi_ep_flush,
+    .ep_flush         = (uct_ep_flush_func_t)uct_gaudi_ep_flush,
     .iface_close      = uct_gaudi_iface_close,
     .iface_query      = uct_gaudi_iface_query,
     // Other ops can be added as needed

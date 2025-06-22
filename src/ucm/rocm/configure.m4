@@ -5,6 +5,8 @@
 # See file LICENSE for terms.
 #
 
-UCX_CHECK_ROCM
-AS_IF([test "x$rocm_happy" = "xyes"], [ucm_modules="${ucm_modules}:rocm"])
+AC_DEFUN([UCX_UCM_ROCM_CHECK],[
+    UCX_CHECK_ROCM
+    AS_IF([test "x$rocm_happy" = "xyes"], [ucm_modules="${ucm_modules}:rocm"])
+])
 AC_CONFIG_FILES([src/ucm/rocm/Makefile])

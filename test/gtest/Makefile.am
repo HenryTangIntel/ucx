@@ -103,6 +103,7 @@ gtest_SOURCES = \
 	common/test.cc \
 	\
 	ucm/malloc_hook.cc \
+	ucm/gaudi_hooks.cc \
 	\
 	uct/test_amo.cc \
 	uct/test_atomic_key_reg_rdma_mem_type.cc \
@@ -277,6 +278,18 @@ gtest_LDADD += \
 	$(top_builddir)/src/uct/cuda/libuct_cuda.la
 endif
 
+if HAVE_GAUDI
+gtest_SOURCES += \
+	ucm/gaudi_hooks.cc
+gtest_CPPFLAGS += \
+	$(GAUDI_CPPFLAGS)
+gtest_LDFLAGS += \
+	$(GAUDI_LDFLAGS)
+gtest_LDADD += \
+	$(GAUDI_LIBS) \
+	$(top_builddir)/src/uct/gaudi/libuct_gaudi.la
+endif
+
 if HAVE_HIP
 if HAVE_GNUXX11
 gtest_SOURCES += \
@@ -312,7 +325,9 @@ noinst_HEADERS = \
 	ucp/test_ucp_memheap.h \
 	ucp/test_ucp_tag.h \
 	ucp/ucp_test.h \
-	ucp/ucp_datatype.h
+	ucp/ucp_datatype.h \
+	\
+	common/cuda_context.h
 
 .PHONY: test test gdb valgrind fix_rpath ucx
 
