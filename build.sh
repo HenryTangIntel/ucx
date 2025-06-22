@@ -8,7 +8,7 @@ autoreconf -v --install -I src/ucm/rocm -I src/uct/gaudi -I config/m4 || exit 1
 
 # Configure with Gaudi support, using system habanalabs and drm includes/libs
 CPPFLAGS="-I/usr/include/habanalabs -I/usr/include/drm" \
-./configure --with-gaudi=/usr "$@"
+./configure --with-gaudi=/usr --enable-gtest "$@"
 
 
 # Build all targets with maximum parallelism
@@ -20,7 +20,7 @@ if [ -d src/uct/gaudi ]; then
 fi
 
 # Install to system (may require sudo)
-sudo make install
+# sudo make install
 
 # Build and run unittests (if available)
 make check || true
