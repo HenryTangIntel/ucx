@@ -8,6 +8,7 @@
 #include <ucs/sys/ptr_arith.h>
 #include <common/test.h>
 #include <hlthunk.h> // Assuming this provides Gaudi memory functions
+#include "mock_hlthunk.h"
 
 class gaudi_hooks : public ucs::test {
 protected:
@@ -38,7 +39,7 @@ protected:
 
     void check_mem_alloc_events(
             void *ptr, size_t size,
-            ucs_memory_type_t expect_mem_type = UCS_MEMORY_TYPE_DEVICE) const
+            ucs_memory_type_t expect_mem_type = UCS_MEMORY_TYPE_GAUDI_DEVICE) const
     {
         check_event_present(m_alloc_events, "alloc", ptr, size,
                             expect_mem_type);
@@ -125,7 +126,7 @@ UCS_TEST_F(gaudi_hooks, test_hlthunk_allocate_device_memory_free) {
     // Allocate device memory
     int ret = hlthunk_allocate_device_memory(device_id, &dptr, size);
     ASSERT_EQ(ret, 0); // Assuming 0 for success
-    check_mem_alloc_events(dptr, size, UCS_MEMORY_TYPE_DEVICE);
+    check_mem_alloc_events(dptr, size, UCS_MEMORY_TYPE_GAUDI_DEVICE);
 
     // Free device memory
     ret = hlthunk_free_device_memory(device_id, dptr);
@@ -136,7 +137,7 @@ UCS_TEST_F(gaudi_hooks, test_hlthunk_allocate_device_memory_free) {
     size = 256 * UCS_MBYTE;
     ret = hlthunk_allocate_device_memory(device_id, &dptr, size);
     ASSERT_EQ(ret, 0);
-    check_mem_alloc_events(dptr, size, UCS_MEMORY_TYPE_DEVICE);
+    check_mem_alloc_events(dptr, size, UCS_MEMORY_TYPE_GAUDI_DEVICE);
 
     ret = hlthunk_free_device_memory(device_id, dptr);
     ASSERT_EQ(ret, 0);
