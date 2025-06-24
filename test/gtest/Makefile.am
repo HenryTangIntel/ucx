@@ -291,6 +291,22 @@ gtest_LDADD += \
 endif
 endif
 
+if HAVE_GAUDI
+gtest_SOURCES += \
+    ucm/gaudi_hooks.cc \
+	ucm/gaudi/test_gaudi.cc 
+	
+gtest_CPPFLAGS += \
+    $(GAUDI_CPPFLAGS)
+
+gtest_LDFLAGS += \
+    $(GAUDI_LDFLAGS)
+
+gtest_LDADD += \
+    $(GAUDI_LIBS) \
+    $(top_builddir)/src/ucm/gaudi/libucm_gaudi.la
+endif
+
 noinst_HEADERS = \
 	common/mem_buffer.h \
 	common/test.h \
