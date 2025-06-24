@@ -1,56 +1,70 @@
-AC_ARG_WITH([gaudi],
-    [AS_HELP_STRING([--with-gaudi=PATH], [Path to Habana HL-Thunk installation])],
-    [],
-    [with_gaudi=no])
+#
+# Copyright (c) Habana Labs Ltd. 2024. ALL RIGHTS RESERVED.
+# See file LICENSE for terms.
+#
 
-AC_DEFINE([HAVE_GAUDI], [1], [Define to 1 if Gaudi support is enabled])
+AC_DEFUN([UCX_CHECK_GAUDI],[
 
-AS_IF([test "x$with_gaudi" != "xno"], [
-    gaudi_inc_path=$with_gaudi/include/habanalabs
-    gaudi_lib_path=$with_gaudi/lib/habanalabs
+AS_IF([test "x$gaudi_checked" != "xyes"],
+   [
+    AC_ARG_WITH([gaudi],
+                [AS_HELP_STRING([--with-gaudi=(DIR)], [Enable the use of Gaudi (default is guess).])],
+                [], [with_gaudi=guess])
 
-    AC_MSG_CHECKING([for hlthunk.h in $gaudi_inc_path])
-    CPPFLAGS_SAVE="$CPPFLAGS"
-    CPPFLAGS="$CPPFLAGS -I$gaudi_inc_path"
+    AS_IF([test "x$with_gaudi" = "xno"],
+        [
+         gaudi_happy="no"
+        ],
+        [
+         save_CPPFLAGS="$CPPFLAGS"
+         save_LDFLAGS="$LDFLAGS"
+         save_LIBS="$LIBS"
 
-    AC_CHECK_HEADER([hlthunk.h], [
-        AC_MSG_RESULT([yes])
-        AM_CONDITIONAL([HAVE_GAUDI], [true])
-        
-        # Now check for the symbol in the library
-        AC_MSG_CHECKING([for hlthunk_get_version in libhl-thunk])
-        LDFLAGS_SAVE="$LDFLAGS"
-        LIBS_SAVE="$LIBS"
-        LDFLAGS="$LDFLAGS -L$gaudi_lib_path"
-        LIBS="$LIBS -lhl-thunk"
+         GAUDI_CPPFLAGS=""
+         GAUDI_LDFLAGS=""
+         GAUDI_LIBS=""
 
-        AC_LINK_IFELSE(
-            [AC_LANG_PROGRAM([[#include <hlthunk.h>]],
-                             [[return hlthunk_get_version();]])],
-            [
-                AC_MSG_RESULT([yes])
-                AC_DEFINE([HAVE_GAUDI], [1], [Define if Gaudi support is enabled])
-            ],
-            [
-                AC_MSG_RESULT([no])
-                AC_MSG_ERROR([libhl-thunk not found or missing hlthunk_get_version symbol])
-            ])
+         AS_IF([test ! -z "$with_gaudi" -a "x$with_gaudi" != "xyes" -a "x$with_gaudi" != "xguess"],
+               [ucx_check_gaudi_dir="$with_gaudi"
+                AS_IF([test -d "$with_gaudi/lib64"], [libsuff="64"], [libsuff=""])
+                ucx_check_gaudi_libdir="$with_gaudi/lib$libsuff"
+                GAUDI_CPPFLAGS="-I$with_gaudi/include"
+                GAUDI_LDFLAGS="-L$ucx_check_gaudi_libdir"])
 
-        LDFLAGS="$LDFLAGS_SAVE"
-        LIBS="$LIBS_SAVE"
+         AS_IF([test ! -z "$with_gaudi_libdir" -a "x$with_gaudi_libdir" != "xyes"],
+               [ucx_check_gaudi_libdir="$with_gaudi_libdir"
+                GAUDI_LDFLAGS="-L$ucx_check_gaudi_libdir"])
 
-    ], [
-        AC_MSG_RESULT([no])
-        AC_MSG_ERROR([hlthunk.h not found in $gaudi_inc_path])
-    ])
+         CPPFLAGS="$CPPFLAGS $GAUDI_CPPFLAGS"
+         LDFLAGS="$LDFLAGS $GAUDI_LDFLAGS"
 
-    CPPFLAGS="$CPPFLAGS_SAVE"
-], [
-    AM_CONDITIONAL([HAVE_GAUDI], [false])
-])
+         # Check Gaudi header files
+         AC_CHECK_HEADERS([habanalabs/hlthunk.h drm/drm.h],
+                          [gaudi_happy="yes"], [gaudi_happy="no"])
 
-AM_CONDITIONAL([HAVE_GAUDI], [test "x$have_gaudi" = "xyes"])
-AS_IF([test "x$have_gaudi" = "xyes"], [
-    uct_gaudi_modules="gaudi"
-])
-AC_SUBST([uct_gaudi_modules])
+         # Check Gaudi libraries (example: hlthunk)
+         AS_IF([test "x$gaudi_happy" = "xyes"],
+               [AC_CHECK_LIB([hlthunk], [hlthunk_get_device_pci_ids],
+                             [GAUDI_LIBS="$GAUDI_LIBS -lhlthunk"], [gaudi_happy="no"])])
+
+         CPPFLAGS="$save_CPPFLAGS"
+         LDFLAGS="$save_LDFLAGS"
+         LIBS="$save_LIBS"
+
+         AS_IF([test "x$gaudi_happy" = "xyes"],
+               [AC_SUBST([GAUDI_CPPFLAGS], ["$GAUDI_CPPFLAGS"])
+                AC_SUBST([GAUDI_LDFLAGS], ["$GAUDI_LDFLAGS"])
+                AC_SUBST([GAUDI_LIBS], ["$GAUDI_LIBS"])
+                AC_DEFINE([HAVE_GAUDI], 1, [Enable Gaudi support])],
+               [AS_IF([test "x$with_gaudi" != "xguess"],
+                      [AC_MSG_ERROR([Gaudi support is requested but habanalabs packages cannot be found])],
+                      [AC_MSG_WARN([Gaudi not found])])])
+
+        ]) # "x$with_gaudi" = "xno"
+
+        gaudi_checked=yes
+        AM_CONDITIONAL([HAVE_UCM_GAUDI], [test "x$gaudi_happy" = "xyes"])
+
+   ]) # "x$gaudi_checked" != "xyes"
+
+]) # UCX_CHECK_GAUDI

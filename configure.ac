@@ -244,14 +244,12 @@ AS_IF([test "x$with_docs_only" = xyes],
      m4_include([config/m4/rocm.m4])
      m4_include([config/m4/ze.m4])
      m4_include([config/m4/gdrcopy.m4])
-     m4_include([src/uct/gaudi/configure.m4])
      m4_include([config/m4/mad.m4])
+     m4_include([config/m4/gaudi.m4])
      m4_include([config/m4/lcov.m4])
      m4_include([src/ucm/configure.m4])
-     m4_include([src/ucm/gaudi/configure.m4]) # Add UCM Gaudi check
      m4_include([src/ucs/configure.m4])
      m4_include([src/uct/configure.m4])
-     UCX_UCT_GAUDI_CHECK() # Check for Gaudi support
      m4_include([src/tools/perf/configure.m4])
      m4_include([test/gtest/configure.m4])
      m4_include([test/apps/iodemo/configure.m4])
@@ -371,6 +369,7 @@ AC_CONFIG_FILES([
                  debian/control
                  debian/changelog
                  src/ucp/Makefile
+                 src/ucm/Makefile
                  src/ucp/api/ucp_version.h
                  src/ucp/core/ucp_version.c
                  src/tools/vfs/Makefile
