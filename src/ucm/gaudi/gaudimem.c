@@ -27,6 +27,7 @@ ucs_status_t ucm_gaudi_mem_init(void)
 
     return UCS_OK; // Placeholder
 #else
+    ucm_info("Gaudi support is not enabled");
     return UCS_ERR_UNSUPPORTED;
 #endif
 }

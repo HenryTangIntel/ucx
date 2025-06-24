@@ -17,10 +17,18 @@
 #include <hlthunk.h>
 #endif
 
+/* Always declare these functions regardless of HAVE_GAUDI for testing */
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 ucs_status_t ucm_gaudi_mem_init(void);
 
 void ucm_gaudi_mem_cleanup(void);
 
+#ifdef __cplusplus
+}
+#endif
 // Potentially add functions here to be called by UCM events if Gaudi
 // has specific memory event notifications or registration mechanisms.
 // For example:

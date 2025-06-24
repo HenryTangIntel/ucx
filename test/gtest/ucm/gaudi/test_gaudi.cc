@@ -1,69 +1,83 @@
-#include <gtest/gtest.h>
-#include <ucs/type/status.h>
+/**
+ * Copyright (C) 2023, Habana Labs. ALL RIGHTS RESERVED.
+ * See file LICENSE for terms.
+ */
+
+#include <common/test.h>
 #include <ucm/api/ucm.h>
+#include <ucm/gaudi/gaudimem.h>
 
-// Declare the functions we're testing from the real library
-extern "C" {
-ucs_status_t ucm_gaudi_mem_init(void);
-void ucm_gaudi_mem_cleanup(void);
-}
-
-class test_gaudi : public ::testing::Test {
+class test_ucm_gaudi : public ucs::test {
 protected:
-    void SetUp() override {
-        // No init needed as we do it in the test
+    virtual void init() {
+        ucs::test::init();
     }
 
-    void TearDown() override {
-        // No cleanup needed as we do it in the test
+    virtual void cleanup() {
+        ucs::test::cleanup();
     }
 };
 
-TEST_F(test_gaudi, init_cleanup) {
+UCS_TEST_F(test_ucm_gaudi, init_cleanup) {
     ucs_status_t status;
 
+    /* Test initialization */
     status = ucm_gaudi_mem_init();
-    ASSERT_EQ(UCS_OK, status);
-
-    // The test is just verifying we can call these functions
-    ucm_gaudi_mem_cleanup();
-}
-
-// Test double initialization
-TEST_F(test_gaudi, double_init) {
-    ucs_status_t status;
-    
-    status = ucm_gaudi_mem_init();
-    ASSERT_EQ(UCS_OK, status);
-    
-    // Second init should still return OK (idempotent initialization)
-    status = ucm_gaudi_mem_init();
-    ASSERT_EQ(UCS_OK, status);
-    
-    // Cleanup only once needed since our implementation is a no-op
-    ucm_gaudi_mem_cleanup();
-}
-
-// Test init-cleanup-init cycle
-TEST_F(test_gaudi, init_cleanup_cycle) {
-    ucs_status_t status;
-    
-    // First cycle
-    status = ucm_gaudi_mem_init();
-    ASSERT_EQ(UCS_OK, status);
-    ucm_gaudi_mem_cleanup();
-    
-    // Second cycle should work too
-    status = ucm_gaudi_mem_init();
-    ASSERT_EQ(UCS_OK, status);
-    ucm_gaudi_mem_cleanup();
-}
-
-#if !HAVE_GAUDI
-TEST_F(test_gaudi, unsupported) {
-    // This test only makes sense when Gaudi support is NOT compiled in
-    ucs_status_t status = ucm_gaudi_mem_init();
-    ASSERT_EQ(UCS_ERR_UNSUPPORTED, status);
-}
+#ifdef HAVE_GAUDI
+    EXPECT_EQ(UCS_OK, status);
+#else
+    EXPECT_EQ(UCS_ERR_UNSUPPORTED, status);
 #endif
 
+    /* Test cleanup - should not crash or cause errors */
+    ucm_gaudi_mem_cleanup();
+}
+
+UCS_TEST_F(test_ucm_gaudi, double_init) {
+    ucs_status_t status;
+    
+    /* First init */
+    status = ucm_gaudi_mem_init();
+#ifdef HAVE_GAUDI
+    EXPECT_EQ(UCS_OK, status);
+#else
+    EXPECT_EQ(UCS_ERR_UNSUPPORTED, status);
+#endif
+
+    /* Second init - should behave the same */
+    status = ucm_gaudi_mem_init();
+#ifdef HAVE_GAUDI
+    EXPECT_EQ(UCS_OK, status);
+#else
+    EXPECT_EQ(UCS_ERR_UNSUPPORTED, status);
+#endif
+
+    /* Cleanup */
+    ucm_gaudi_mem_cleanup();
+}
+
+UCS_TEST_F(test_ucm_gaudi, init_cleanup_cycle) {
+    ucs_status_t status;
+    
+    for (int i = 0; i < 5; ++i) {
+        status = ucm_gaudi_mem_init();
+#ifdef HAVE_GAUDI
+        EXPECT_EQ(UCS_OK, status);
+#else
+        EXPECT_EQ(UCS_ERR_UNSUPPORTED, status);
+#endif
+
+        ucm_gaudi_mem_cleanup();
+    }
+}
+
+UCS_TEST_F(test_ucm_gaudi, unsupported_on_non_gaudi) {
+#ifndef HAVE_GAUDI
+    ucs_status_t status;
+    
+    status = ucm_gaudi_mem_init();
+    EXPECT_EQ(UCS_ERR_UNSUPPORTED, status);
+    
+    ucm_gaudi_mem_cleanup(); /* Should be safe to call even if init failed */
+#endif
+}
