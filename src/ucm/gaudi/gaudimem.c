@@ -3,70 +3,131 @@
  * See file LICENSE for terms.
  */
 
+#include <dlfcn.h>
 #include "gaudimem.h"
-#include <ucm/api/ucm.h>
 #include <ucm/event/event.h>
+#include <dlfcn.h>
 #include <ucm/util/log.h>
-#include <ucs/debug/debug.h> // For ucs_debug, ucs_error etc.
+#include <ucm/util/reloc.h>
+#include <ucm/util/replace.h>
+#include <ucs/debug/assert.h>
+#include <ucm/util/sys.h>
+#include <ucs/sys/compiler.h>
+#include <ucs/sys/preprocessor.h>
+#include <sys/mman.h>
+#include <unistd.h>
+#include <pthread.h>
+#include <stdlib.h>
+#include <string.h>
 
-void ucm_gaudi_mmap_hook(ucm_event_type_t event_type, ucm_event_t *event, void *arg);
-void ucm_gaudi_munmap_hook(ucm_event_type_t event_type, ucm_event_t *event, void *arg);
-
-// Placeholder for Gaudi memory event handler or other UCM related logic
-
-ucs_status_t ucm_gaudi_mem_init(void)
-{
 #if HAVE_GAUDI
-    ucs_status_t status;
-    ucm_info("Initializing UCM Gaudi memory module (fixed handler registration)");
-    status = ucm_set_event_handler(UCM_EVENT_MMAP, 0, ucm_gaudi_mmap_hook, NULL);
-    if (status != UCS_OK) {
-        ucm_error("Failed to register mmap event handler for Gaudi: %s", ucs_status_string(status));
-        return status;
-    }
-    status = ucm_set_event_handler(UCM_EVENT_MUNMAP, 0, ucm_gaudi_munmap_hook, NULL);
-    if (status != UCS_OK) {
-        ucm_error("Failed to register munmap event handler for Gaudi: %s", ucs_status_string(status));
-        ucm_unset_event_handler(UCM_EVENT_MMAP, ucm_gaudi_mmap_hook, NULL);
-        return status;
-    }
-    return UCS_OK;
-#else
-    ucm_info("Gaudi support is not enabled");
-    return UCS_ERR_UNSUPPORTED;
-#endif
+
+UCM_DEFINE_REPLACE_DLSYM_FUNC(hlthunk_allocate_device_memory, int, -1, int, void **, size_t)
+UCM_DEFINE_REPLACE_DLSYM_FUNC(hlthunk_free_device_memory, int, -1, int, void *)
+
+static UCS_F_ALWAYS_INLINE void
+ucm_dispatch_gaudi_mem_type_alloc(void *addr, size_t length)
+{
+    ucm_event_t event;
+    event.mem_type.address  = addr;
+    event.mem_type.size     = length;
+    event.mem_type.mem_type = UCS_MEMORY_TYPE_GAUDI_DEVICE;
+    ucm_event_dispatch(UCM_EVENT_MEM_TYPE_ALLOC, &event);
 }
 
-void ucm_gaudi_mem_cleanup(void)
+static UCS_F_ALWAYS_INLINE void
+ucm_dispatch_gaudi_mem_type_free(void *addr, size_t length)
 {
-#if HAVE_GAUDI
-    ucm_info("Cleaning up UCM Gaudi memory module");
-    ucm_unset_event_handler(UCM_EVENT_MMAP, ucm_gaudi_mmap_hook, NULL);
-    ucm_unset_event_handler(UCM_EVENT_MUNMAP, ucm_gaudi_munmap_hook, NULL);
-#endif
+    ucm_event_t event;
+    event.mem_type.address  = addr;
+    event.mem_type.size     = length;
+    event.mem_type.mem_type = UCS_MEMORY_TYPE_GAUDI_DEVICE;
+    ucm_event_dispatch(UCM_EVENT_MEM_TYPE_FREE, &event);
 }
 
-// Implementations for UCM event handler callbacks
-void ucm_gaudi_mmap_hook(ucm_event_type_t event_type, ucm_event_t *event, void *arg)
+int ucm_hlthunk_allocate_device_memory(int device_id, void **dptr, size_t size)
 {
-#if HAVE_GAUDI
-    if (event_type == UCM_EVENT_MMAP) {
-        ucm_debug("Gaudi mmap hook: addr=%p length=%zu", event->mmap.address, event->mmap.size);
-        // Potentially interact with hlthunk API here if needed
+    int ret;
+    ucm_event_enter();
+    ret = ucm_orig_hlthunk_allocate_device_memory(device_id, dptr, size);
+    if (ret == 0) {
+        ucm_trace("ucm_hlthunk_allocate_device_memory(ptr=%p size:%lu)", *dptr, size);
+        ucm_dispatch_gaudi_mem_type_alloc(*dptr, size);
     }
-#endif
+    ucm_event_leave();
+    return ret;
 }
 
-void ucm_gaudi_munmap_hook(ucm_event_type_t event_type, ucm_event_t *event, void *arg)
+int ucm_hlthunk_free_device_memory(int device_id, void *dptr)
 {
-#if HAVE_GAUDI
-    if (event_type == UCM_EVENT_MUNMAP) {
-        ucm_debug("Gaudi munmap hook: addr=%p length=%zu", event->munmap.address, event->munmap.size);
-        // Potentially interact with hlthunk API here if needed
-    }
-#endif
+    int ret;
+    ucm_event_enter();
+    ucm_trace("ucm_hlthunk_free_device_memory(device_id=%d, ptr=%p)", device_id, dptr);
+    // For now, we don't know the size, so pass 0
+    ucm_dispatch_gaudi_mem_type_free(dptr, 0);
+    ret = ucm_orig_hlthunk_free_device_memory(device_id, dptr);
+    ucm_event_leave();
+    return ret;
 }
-// Auto-initialize this UCM module if compiled in
-#if HAVE_GAUDI
-// UCM_MODULE_INIT(ucm_gaudi_mem_init, ucm_gaudi_mem_cleanup);
-#endif
+
+static ucm_reloc_patch_t patches[] = {
+    {"hlthunk_allocate_device_memory", ucm_hlthunk_allocate_device_memory},
+    {"hlthunk_free_device_memory", ucm_hlthunk_free_device_memory},
+    {NULL, NULL}
+};
+
+static ucs_status_t ucm_gaudimem_install(int events)
+{
+    static int ucm_gaudimem_installed = 0;
+    static pthread_mutex_t install_mutex = PTHREAD_MUTEX_INITIALIZER;
+    ucm_reloc_patch_t *patch;
+    ucs_status_t status = UCS_OK;
+
+    if (!(events & (UCM_EVENT_MEM_TYPE_ALLOC | UCM_EVENT_MEM_TYPE_FREE))) {
+        goto out;
+    }
+
+    pthread_mutex_lock(&install_mutex);
+
+    if (ucm_gaudimem_installed) {
+        goto out_unlock;
+    }
+
+    for (patch = patches; patch->symbol != NULL; ++patch) {
+        status = ucm_reloc_modify(patch);
+        if (status != UCS_OK) {
+            ucm_warn("failed to install relocation table entry for '%s'", patch->symbol);
+            goto out_unlock;
+        }
+    }
+
+    ucm_info("Gaudi hooks are ready");
+    ucm_gaudimem_installed = 1;
+
+out_unlock:
+    pthread_mutex_unlock(&install_mutex);
+out:
+    return status;
+}
+
+static void ucm_gaudimem_get_existing_alloc(ucm_event_handler_t *handler)
+{
+    // No-op for now, could scan /proc/self/maps for Gaudi regions if needed
+}
+
+static ucm_event_installer_t ucm_gaudi_initializer = {
+    .install            = ucm_gaudimem_install,
+    .get_existing_alloc = ucm_gaudimem_get_existing_alloc
+};
+
+UCS_STATIC_INIT
+{
+    ucs_list_add_tail(&ucm_event_installer_list, &ucm_gaudi_initializer.list);
+}
+
+UCS_STATIC_CLEANUP
+{
+    ucs_list_del(&ucm_gaudi_initializer.list);
+}
+
+#endif // HAVE_GAUDI

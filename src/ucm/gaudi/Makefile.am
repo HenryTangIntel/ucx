@@ -9,7 +9,7 @@ if HAVE_GAUDI
 # moduledir = $(libdir)/ucx/ucm
 module_LTLIBRARIES = libucm_gaudi.la
 
-libucm_gaudi_la_CPPFLAGS = $(BASE_CPPFLAGS) $(GAUDI_CPPFLAGS)
+libucm_gaudi_la_CPPFLAGS = -D_GNU_SOURCE $(BASE_CPPFLAGS) $(GAUDI_CPPFLAGS)
 libucm_gaudi_la_CFLAGS   = $(BASE_CFLAGS)
 libucm_gaudi_la_LIBADD   =
 libucm_gaudi_la_LDFLAGS  = $(UCM_MODULE_LDFLAGS) $(GAUDI_LDFLAGS) $(GAUDI_LIBS) -version-info $(SOVERSION)

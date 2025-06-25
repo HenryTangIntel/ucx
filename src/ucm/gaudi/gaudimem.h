@@ -17,22 +17,16 @@
 #include <hlthunk.h>
 #endif
 
-/* Always declare these functions regardless of HAVE_GAUDI for testing */
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-ucs_status_t ucm_gaudi_mem_init(void);
-
-void ucm_gaudi_mem_cleanup(void);
+int ucm_hlthunk_allocate_device_memory(int device_id, void **dptr, size_t size);
+int ucm_hlthunk_free_device_memory(int device_id, void *dptr);
 
 #ifdef __cplusplus
 }
 #endif
-// Potentially add functions here to be called by UCM events if Gaudi
-// has specific memory event notifications or registration mechanisms.
-// For example:
-// void ucm_gaudi_mmap_hook(void *addr, size_t length, int prot, int flags, int fd, off_t offset);
-// void ucm_gaudi_munmap_hook(void *addr, size_t length);
 
 #endif // UCM_GAUDI_MEM_H_
