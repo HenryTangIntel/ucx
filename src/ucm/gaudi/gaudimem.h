@@ -14,7 +14,7 @@
 
 // Include the Gaudi thunk header if Gaudi support is compiled in UCT
 #if HAVE_GAUDI
-#include <hlthunk.h>
+#include <habanalabs/hlthunk.h>
 #endif
 
 

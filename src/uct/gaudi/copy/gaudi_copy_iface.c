@@ -1,8 +1,8 @@
-#include "gaudi_iface.h"
+#include "gaudi_copy_iface.h"
 
-#include "gaudi_md.h"
+#include "gaudi_copy_md.h"
 
-#include "gaudi_ep.h"
+#include "gaudi_copy_ep.h"
 
 
 #include <ucs/type/class.h>

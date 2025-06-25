@@ -293,8 +293,7 @@ endif
 
 if HAVE_GAUDI
 gtest_SOURCES += \
-    ucm/gaudi_hooks.cc \
-	ucm/gaudi/test_gaudi.cc 
+	uct/test_gaudi_md.cc
 	
 gtest_CPPFLAGS += \
     $(GAUDI_CPPFLAGS)
@@ -304,7 +303,8 @@ gtest_LDFLAGS += \
 
 gtest_LDADD += \
     $(GAUDI_LIBS) \
-    $(top_builddir)/src/ucm/gaudi/libucm_gaudi.la
+    $(top_builddir)/src/ucm/gaudi/libucm_gaudi.la \
+	$(top_builddir)/src/uct/gaudi/.libs/libuct_gaudi.a
 endif
 
 noinst_HEADERS = \

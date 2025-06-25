@@ -1,5 +1,10 @@
+#include <gtest/gtest.h>
+#include <ucm/gaudi/gaudimem.h>
 
 #ifdef HAVE_GAUDI
+class test_ucm_gaudi : public ::testing::Test {
+};
+
 UCS_TEST_F(test_ucm_gaudi, hlthunk_device_memory_alloc_and_free) {
     int fd = 0; // Use fd 0 for testing (replace with a valid fd if needed)
     uint64_t size = 4096;
