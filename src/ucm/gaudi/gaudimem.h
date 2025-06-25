@@ -18,12 +18,13 @@
 #endif
 
 
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-int ucm_hlthunk_allocate_device_memory(int device_id, void **dptr, size_t size);
-int ucm_hlthunk_free_device_memory(int device_id, void *dptr);
+int ucm_hlthunk_device_memory_alloc(int fd, uint64_t size, uint64_t page_size, bool contiguous, bool shared, uint64_t *handle);
+int ucm_hlthunk_device_memory_free(int fd, uint64_t handle);
 
 #ifdef __cplusplus
 }

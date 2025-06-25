@@ -3,10 +3,8 @@
  * See file LICENSE for terms.
  */
 
-#include <dlfcn.h>
 #include "gaudimem.h"
 #include <ucm/event/event.h>
-#include <dlfcn.h>
 #include <ucm/util/log.h>
 #include <ucm/util/reloc.h>
 #include <ucm/util/replace.h>
@@ -22,57 +20,57 @@
 
 #if HAVE_GAUDI
 
-UCM_DEFINE_REPLACE_DLSYM_FUNC(hlthunk_allocate_device_memory, int, -1, int, void **, size_t)
-UCM_DEFINE_REPLACE_DLSYM_FUNC(hlthunk_free_device_memory, int, -1, int, void *)
+UCM_DEFINE_REPLACE_DLSYM_FUNC(hlthunk_device_memory_alloc, int, -1, int, uint64_t, uint64_t, bool, bool, uint64_t *)
+UCM_DEFINE_REPLACE_DLSYM_FUNC(hlthunk_device_memory_free, int, -1, int, uint64_t)
 
 static UCS_F_ALWAYS_INLINE void
-ucm_dispatch_gaudi_mem_type_alloc(void *addr, size_t length)
+ucm_dispatch_gaudi_mem_type_alloc(void *addr, size_t length, ucs_memory_type_t mem_type)
 {
     ucm_event_t event;
     event.mem_type.address  = addr;
     event.mem_type.size     = length;
-    event.mem_type.mem_type = UCS_MEMORY_TYPE_GAUDI_DEVICE;
+    event.mem_type.mem_type = mem_type;
     ucm_event_dispatch(UCM_EVENT_MEM_TYPE_ALLOC, &event);
 }
 
 static UCS_F_ALWAYS_INLINE void
-ucm_dispatch_gaudi_mem_type_free(void *addr, size_t length)
+ucm_dispatch_gaudi_mem_type_free(void *addr, size_t length, ucs_memory_type_t mem_type)
 {
     ucm_event_t event;
     event.mem_type.address  = addr;
     event.mem_type.size     = length;
-    event.mem_type.mem_type = UCS_MEMORY_TYPE_GAUDI_DEVICE;
+    event.mem_type.mem_type = mem_type;
     ucm_event_dispatch(UCM_EVENT_MEM_TYPE_FREE, &event);
 }
 
-int ucm_hlthunk_allocate_device_memory(int device_id, void **dptr, size_t size)
+
+int ucm_hlthunk_device_memory_alloc(int fd, uint64_t size, uint64_t page_size, bool contiguous, bool shared, uint64_t *handle)
 {
     int ret;
     ucm_event_enter();
-    ret = ucm_orig_hlthunk_allocate_device_memory(device_id, dptr, size);
-    if (ret == 0) {
-        ucm_trace("ucm_hlthunk_allocate_device_memory(ptr=%p size:%lu)", *dptr, size);
-        ucm_dispatch_gaudi_mem_type_alloc(*dptr, size);
+    ret = ucm_orig_hlthunk_device_memory_alloc(fd, size, page_size, contiguous, shared, handle);
+    if (ret == 0 && handle) {
+        ucm_trace("ucm_hlthunk_device_memory_alloc(handle=%p size:%lu)", (void*)(uintptr_t)(*handle), size);
+        ucm_dispatch_gaudi_mem_type_alloc((void*)(uintptr_t)(*handle), size, UCS_MEMORY_TYPE_GAUDI_DEVICE);
     }
     ucm_event_leave();
     return ret;
 }
 
-int ucm_hlthunk_free_device_memory(int device_id, void *dptr)
+int ucm_hlthunk_device_memory_free(int fd, uint64_t handle)
 {
     int ret;
     ucm_event_enter();
-    ucm_trace("ucm_hlthunk_free_device_memory(device_id=%d, ptr=%p)", device_id, dptr);
-    // For now, we don't know the size, so pass 0
-    ucm_dispatch_gaudi_mem_type_free(dptr, 0);
-    ret = ucm_orig_hlthunk_free_device_memory(device_id, dptr);
+    ucm_trace("ucm_hlthunk_device_memory_free(handle=%lu)", handle);
+    ucm_dispatch_gaudi_mem_type_free((void *)(uintptr_t)handle, 0, UCS_MEMORY_TYPE_GAUDI_DEVICE);
+    ret = ucm_orig_hlthunk_device_memory_free(fd, handle);
     ucm_event_leave();
     return ret;
 }
 
 static ucm_reloc_patch_t patches[] = {
-    {"hlthunk_allocate_device_memory", ucm_hlthunk_allocate_device_memory},
-    {"hlthunk_free_device_memory", ucm_hlthunk_free_device_memory},
+    {"hlthunk_device_memory_alloc", ucm_hlthunk_device_memory_alloc},
+    {"hlthunk_device_memory_free", ucm_hlthunk_device_memory_free},
     {NULL, NULL}
 };
 
