@@ -1,0 +1,62 @@
+[0;34m===============================================[0m
+[0;34m         GAUDI MODULE TEST UTILITY v2           [0m
+[0;34m===============================================[0m
+2025-06-26 21:02:33 [0;32m[INFO][0m Starting Gaudi module tests
+2025-06-26 21:02:33 [0;32m[INFO][0m Date: Thu Jun 26 21:02:33 UTC 2025
+2025-06-26 21:02:33 [0;32m[INFO][0m System: Linux sc09wynn07-hls2 5.15.0-142-generic #152-Ubuntu SMP Mon May 19 10:54:31 UTC 2025 x86_64 x86_64 x86_64 GNU/Linux
+
+[0;34m=== Hardware Environment Check ===[0m
+2025-06-26 21:02:33 [0;32m[INFO][0m Running test: Hardware Environment Check
+2025-06-26 21:02:33 [0;32m[INFO][0m Checking for Gaudi devices...
+2025-06-26 21:02:33 [0;32m[INFO][0m Found 8 Gaudi devices
+33:00.0 Processing accelerators: Habana Labs Ltd. Device 1020 (rev 01)
+34:00.0 Processing accelerators: Habana Labs Ltd. Device 1020 (rev 01)
+4d:00.0 Processing accelerators: Habana Labs Ltd. Device 1020 (rev 01)
+   (and 5 more devices)
+2025-06-26 21:02:33 [0;32m[INFO][0m Checking kernel driver...
+2025-06-26 21:02:33 [0;32m[INFO][0m habanalabs driver is loaded
+2025-06-26 21:02:33 [0;32m[INFO][0m Checking for HL-Thunk library...
+2025-06-26 21:02:33 [0;32m[INFO][0m libhl-thunk.so is available
+2025-06-26 21:02:33 [0;32m[INFO][0m Test completed successfully
+
+[0;34m=== Module Build Check ===[0m
+2025-06-26 21:02:33 [0;32m[INFO][0m Running test: Module Build Check
+2025-06-26 21:02:33 [0;32m[INFO][0m Checking for Gaudi module files...
+2025-06-26 21:02:33 [0;32m[INFO][0m Gaudi module source files exist
+2025-06-26 21:02:33 [0;32m[INFO][0m Checking for built module...
+2025-06-26 21:02:33 [0;32m[INFO][0m Gaudi module binary exists
+/workspace/ucx/modules/libuct_gaudi.so: symbolic link to ../src/uct/gaudi/.libs/libuct_gaudi.so.0.0.0
+2025-06-26 21:02:33 [0;32m[INFO][0m Module points to valid target: /workspace/ucx/src/uct/gaudi/.libs/libuct_gaudi.so.0.0.0
+-rwxr-xr-x 1 root root 29992 Jun 26 19:54 /workspace/ucx/src/uct/gaudi/.libs/libuct_gaudi.so.0.0.0
+2025-06-26 21:02:33 [0;32m[INFO][0m Test completed successfully
+
+[0;34m=== Device Access Check ===[0m
+2025-06-26 21:02:33 [0;32m[INFO][0m Running test: Device Access Check
+2025-06-26 21:02:33 [0;32m[INFO][0m Checking for device nodes...
+2025-06-26 21:02:33 [1;33m[WARN][0m Device nodes directory does not exist
+2025-06-26 21:02:33 [1;33m[WARN][0m This may limit hardware access capabilities
+2025-06-26 21:02:33 [0;32m[INFO][0m Test completed successfully
+
+[0;34m=== Module Symbol Check ===[0m
+2025-06-26 21:02:33 [0;32m[INFO][0m Running test: Module Symbol Check
+2025-06-26 21:02:33 [0;32m[INFO][0m Checking module symbols...
+2025-06-26 21:02:33 [0;32m[INFO][0m Examining module exports...
+                 U uct_components_list
+00000000000013c5 T uct_gaudi_md_open
+2025-06-26 21:02:33 [0;32m[INFO][0m Test completed successfully
+
+[0;34m=== Module Loading Test ===[0m
+2025-06-26 21:02:33 [0;32m[INFO][0m Running test: Module Loading Test
+2025-06-26 21:02:33 [0;32m[INFO][0m Testing module loading...
+Successfully loaded /workspace/ucx/modules/libuct_gaudi.so
+2025-06-26 21:02:33 [0;32m[INFO][0m Test completed successfully
+
+[0;34m===============================================[0m
+[0;34m              TEST SUMMARY                      [0m
+[0;34m===============================================[0m
+2025-06-26 21:02:34 [0;32m[INFO][0m Report generated: /workspace/ucx/GAUDI_MODULE_TEST_REPORT.md
+2025-06-26 21:02:34 [0;32m[INFO][0m All tests completed
+
+[0;34m===============================================[0m
+[0;34m         TEST EXECUTION COMPLETE                 [0m
+[0;34m===============================================[0m

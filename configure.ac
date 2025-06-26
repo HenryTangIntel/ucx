@@ -223,7 +223,8 @@ AS_IF([test "x$with_docs_only" = xyes],
      AM_CONDITIONAL([IODEMO_CUDA], [false])
      AM_CONDITIONAL([HAVE_GCOV], [false])
      AM_CONDITIONAL([HAVE_LCOV], [false])
-    ],
+     AM_CONDITIONAL([HAVE_GAUDI],[false])
+     ],
     [
      AM_CONDITIONAL([DOCS_ONLY], [false])
      m4_include([config/m4/compiler.m4])
@@ -238,6 +239,7 @@ AS_IF([test "x$with_docs_only" = xyes],
      m4_include([config/m4/gdrcopy.m4])
      m4_include([config/m4/mad.m4])
      m4_include([config/m4/lcov.m4])
+     m4_include([config/m4/gaudi.m4])
      m4_include([src/ucm/configure.m4])
      m4_include([src/ucs/configure.m4])
      m4_include([src/uct/configure.m4])
@@ -246,6 +248,8 @@ AS_IF([test "x$with_docs_only" = xyes],
      m4_include([test/apps/iodemo/configure.m4])
      m4_include([test/apps/uct_info/configure.m4])
 
+     # Check for Gaudi support
+     UCX_CHECK_GAUDI
 
      #
      # Disable checking user parameters
