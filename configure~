@@ -4830,10 +4830,10 @@ fi
 if test x"${GITBIN}" = x"yes"
 then :
   # remove preceding "refs/heads/" (11 characters) for symbolic ref
-       SCM_BRANCH=v1.16.0
+       SCM_BRANCH=gaudi-v1.16.0-work
 
 
-       SCM_VERSION=e4bb802
+       SCM_VERSION=bd11cf4
 
 
 else $as_nop

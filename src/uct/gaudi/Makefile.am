@@ -13,7 +13,8 @@ libuct_gaudi_la_LIBADD   = $(top_builddir)/src/ucs/libucs.la \
 libuct_gaudi_la_LDFLAGS  = $(GAUDI_LDFLAGS) $(GAUDI_LIBS) -version-info $(SOVERSION) \
                           $(patsubst %, -Xlinker %, -L$(GAUDI_ROOT)/lib -rpath $(GAUDI_ROOT)/hip/lib -rpath $(GAUDI_ROOT)/lib) \
                           $(patsubst %, -Xlinker %, --enable-new-dtags) \
-                          $(patsubst %, -Xlinker %, -rpath $(GAUDI_ROOT)/lib64)
+                          $(patsubst %, -Xlinker %, -rpath $(GAUDI_ROOT)/lib64) \
+                          -L/usr/lib/habanalabs -lhl-thunk
 
 
 noinst_HEADERS = gaudi_md.h 

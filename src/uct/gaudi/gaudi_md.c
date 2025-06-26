@@ -142,4 +142,4 @@ ucs_status_t uct_gaudi_md_open(uct_component_t *component,
 
 
 
-UCT_COMPONENT_REGISTER(&uct_gaudi_component)
+ UCT_COMPONENT_REGISTER(&uct_gaudi_component)
