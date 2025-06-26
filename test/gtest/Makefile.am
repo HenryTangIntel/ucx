@@ -293,7 +293,8 @@ endif
 
 if HAVE_GAUDI
 gtest_SOURCES += \
-	uct/test_gaudi_md.cc
+	uct/test_gaudi_md.cc \
+	uct/test_habana_gaudi.cc
 	
 gtest_CPPFLAGS += \
     $(GAUDI_CPPFLAGS)

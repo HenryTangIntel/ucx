@@ -1,7 +1,7 @@
 #include "gaudi_copy_md.h"
 extern ucs_config_field_t uct_gaudi_md_config_table[];
 #include <ucs/sys/math.h>
-#include <ucs/sys/math.h>
+#include <ucs/sys/ptr_arith.h>
 #include <ucs/sys/string.h>
 #include <ucs/sys/sys.h>
 #include <ucs/debug/log.h>
