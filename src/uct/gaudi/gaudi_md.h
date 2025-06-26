@@ -16,4 +16,11 @@ ucs_status_t uct_gaudi_md_open(uct_component_t *component,
                                const uct_md_config_t *config,
                                uct_md_h *md_p);
 void uct_gaudi_md_close(uct_md_h uct_md);
+
+/* Forward declarations */
+ucs_status_t uct_gaudi_md_query(uct_md_h md, uct_md_attr_v2_t *md_attr);
+ucs_status_t uct_gaudi_query_md_resources(uct_component_h component,
+                                              uct_md_resource_desc_t **resources_p,
+                                              unsigned *num_resources_p);
+
 #endif

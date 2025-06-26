@@ -22,10 +22,12 @@ static uct_md_ops_t uct_gaudi_md_ops = {
 };
 */
 /* Forward declarations */
+/*
 static ucs_status_t uct_gaudi_md_query(uct_md_h md, uct_md_attr_v2_t *md_attr);
 static ucs_status_t uct_gaudi_query_md_resources(uct_component_h component,
                                               uct_md_resource_desc_t **resources_p,
                                               unsigned *num_resources_p);
+*/
 
 
 
@@ -39,7 +41,7 @@ void uct_gaudi_md_close(uct_md_h  uct_md)
 }
 
 /* Basic MD query that sets memory domain properties */
-static ucs_status_t uct_gaudi_md_query(uct_md_h md, uct_md_attr_v2_t *md_attr)
+ucs_status_t uct_gaudi_md_query(uct_md_h md, uct_md_attr_v2_t *md_attr)
 {
     md_attr->flags = UCT_MD_FLAG_REG | UCT_MD_FLAG_ALLOC;
     md_attr->reg_mem_types = UCS_BIT(UCS_MEMORY_TYPE_HOST);
@@ -55,6 +57,9 @@ static ucs_status_t uct_gaudi_md_query(uct_md_h md, uct_md_attr_v2_t *md_attr)
 }
 
 
+
+
+
 static uct_md_ops_t uct_gaudi_md_ops = {
     .close        = uct_gaudi_md_close,
     .query        = uct_gaudi_md_query,
@@ -65,8 +70,10 @@ static uct_md_ops_t uct_gaudi_md_ops = {
 };
 
 
+
+
 /* Query available Gaudi MD resources */
-static ucs_status_t uct_gaudi_query_md_resources(uct_component_h component,
+ucs_status_t uct_gaudi_query_md_resources(uct_component_h component,
                                                uct_md_resource_desc_t **resources_p,
                                                unsigned *num_resources_p)
 {
