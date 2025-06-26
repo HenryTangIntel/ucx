@@ -30,7 +30,9 @@ static ucs_status_t uct_gaudi_query_md_resources(uct_component_h component,
 */
 
 
-
+static ucs_config_field_t uct_gaudi_md_config_table[] = {
+    {NULL}
+};
 
 void uct_gaudi_md_close(uct_md_h  uct_md)
 {
@@ -113,10 +115,15 @@ static uct_component_t uct_gaudi_component = {
     .md_config          = {
         .name           = "Gaudi memory domain",
         .prefix         = "GAUDI_",
-        .table          = NULL,
+        .table          = uct_gaudi_md_config_table,
         .size           = sizeof(uct_md_config_t),
     },
+    .cm_config          = UCS_CONFIG_EMPTY_GLOBAL_LIST_ENTRY,
+    .tl_list            = UCT_COMPONENT_TL_LIST_INITIALIZER(&uct_gaudi_component),
+    .flags              = 0,
+    .md_vfs_init        = (uct_component_md_vfs_init_func_t)ucs_empty_function
 };
+
 
 ucs_status_t uct_gaudi_md_open(uct_component_t *component,
                                const char *md_name,
@@ -141,5 +148,4 @@ ucs_status_t uct_gaudi_md_open(uct_component_t *component,
 
 
 
-
- UCT_COMPONENT_REGISTER(&uct_gaudi_component)
+UCT_COMPONENT_REGISTER(&uct_gaudi_component)

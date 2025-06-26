@@ -1,0 +1,1000 @@
+  337  make clean
+  338  ./build.sh
+  339  cd ..
+  340  ./build.sh
+  341  ./gtest --gtest_list_tests
+  342  cd test/gtest/
+  343  ./gtest --gtest_list_tests
+  344  ./gtest --gtest_list_tests | grep gaudi
+  345  ./configure --help | grep -i gaudi || true
+  346  ls -l /workspace/ucx/ | grep configure
+  347  cd /workspace/ucx && ./configure --help | grep -i gaudi || true
+  348  cd /workspace/ucx && ./configure | tee configure.log
+  349  grep -i gaudi config.log || true
+  350  ./build.sh
+  351  cd test/gtest/
+  352  ./gtest --gtest_list_tests | grep gaudi
+  353  ./gtest --gtest_filter=test_uct_gaudi_md.*
+  354  ./gtest --gtest_filter=test_gaudi_md.*
+  355  grep -i gaudi Makefile || true
+  356  ls -l uct/gtest-test_gaudi_md.*
+  357  ls -l ../gtest || true
+  358  nm -C ../gtest | grep gaudi || true
+  359  nm -C ../gtest/gtest | grep gaudi || true
+  360  nm -C gtest | grep gaudi || true
+  361  dpkg -l | grep -i habana || true
+  362  find /usr/include /usr/local/include -name hlthunk.h 2>/dev/null | head -10
+  363  find / -name hlthunk.h 2>/dev/null | head -10
+  364  ls -l /usr/include/habanalabs/hlthunk.h
+  365  ls -l /usr/include/habanalabs/
+  366  ls -l /usr/include/
+  367  ls -l /usr/include/habanalabs/hlthunk.h
+  368  ls -l /usr/include/habanalabs
+  369  ls -l /usr/lib* | grep hl-thunk || true
+  370  find /usr/lib /usr/lib64 /usr/local/lib -name 'libhl-thunk*' 2>/dev/null | head -10
+  371  find / -name 'libhl-thunk*' 2>/dev/null | head -10
+  372  ls -l /workspace/ucx/src/ucm/gaudi/ | grep libucm_gaudi || true
+  373  ls -l /workspace/ucx/src/uct/ | grep gaudi || true
+  374  ls -l /workspace/ucx/src/ucm/gaudi/
+  375  ls -l /workspace/ucx/src/ucm/
+  376  ls -l /workspace/ucx/src/ucm/gaudi/
+  377  ls -l /workspace/ucx/src/ucm/gaudi
+  378  file /workspace/ucx/src/ucm/gaudi/libucm_gaudi.la
+  379  cat /workspace/ucx/src/ucm/gaudi/libucm_gaudi.la
+  380  ls -l /usr/lib/habanalabs/ | grep hl-thunk || true
+  381  ls -l /usr/lib64/ | grep hl-thunk || true
+  382  cd ..
+  383  ./build.sh
+  384  cd test/gtest && ./gtest --gtest_list_tests | grep gaudi || true
+  385  cd test/gtest && ./gtest --gtest_list_tests
+  386  ls -l test/gtest | grep gtest || true
+  387  ls -l ./test/gtest || true
+  388  ls -l ./test || true
+  389  ls -l ./
+  390  ./gtest --gtest_list_tests | grep gaudi || true
+  391  ./gtest --gtest_list_tests
+  392  cd /opt
+  393  ls
+  394  cd habanalabs/
+  395  ls
+  396  cd src
+  397  ls
+  398  cd hl-thunk/
+  399  ls
+  400  cd include/
+  401  ls
+  402  cd uapi/
+  403  ls
+  404  grep -rH device_memory *
+  405  grep -3H device_memory_alloc *
+  406  grep -3H device_memory_free *
+  407  cd ..
+  408  ls
+  409  cd ..
+  410  ls
+  411  cd src
+  412  ls
+  413  cd /usr/
+  414  cd lib
+  415  ls
+  416  cd habanalabs/
+  417  ls
+  418  pwd
+  419  make -C src/ucm/gaudi
+  420  git status
+  421  git add -u
+  422  git commit -m "update."
+  423  git push
+  424  ./autogen.sh 
+  425  ./build.sh
+  426  make -j$(nproc)
+  427  ./gtest --gtest_filter="test_gaudi.*"
+  428  cd test
+  429  cd gtest/
+  430  ./gtest --gtest_filter="test_gaudi.*"
+  431  ./build.sh
+  432  cd ..
+  433  cd ../
+  434  ./build.sh
+  435  ls build.sh
+  436  ./build.sh
+  437  ./gtest --gtest_filter="test_gaudi.*" 
+  438  cd test/gtest
+  439  ./gtest --gtest_filter="test_gaudi.*" 
+  440  cd ..
+  441  ./build.sh
+  442  cd src/ucm/gaudi
+  443  make -C .
+  444  make -C src/ucm/gaudi
+  445  cd ..
+  446  make -C src/ucm/gaudi
+  447  find . -name '*gaudi*' -type f | grep -E '\.(so|a|la|o|lo)$' || true
+  448  find . -name '*hl-thunk*' -type f || true
+  449  find /usr/lib/habanalabs/ -name 'libhl-thunk*' || true
+  450  find . -type f -name 'libucm_gaudi*' || true
+  451  ls -l ./src/ucm/gaudi/.libs/ | grep libucm_gaudi || true
+  452  ls -l ./src/ucm/gaudi/.libs/
+  453  nm -D ./src/ucm/gaudi/.libs/libucm_gaudi.so.0.0.0 | grep hlthunk || true
+  454  ldd ./src/ucm/gaudi/.libs/libucm_gaudi.so.0.0.0 || true
+  455  find . -name '*gaudi*' -type f | grep '\.o$' || true
+  456  ls -l ./src/uct/gaudi/.libs/
+  457  ls -l ./src/uct/gaudi/libuct_gaudi.la || true
+  458  ls -l ./src/uct/gaudi/
+  459  cd test/gtest && ./gtest --gtest_list_tests | grep -i gaudi || true
+  460  ./gtest --gtest_list_tests | grep -i gaudi || true
+  461  ./gtest --gtest_list_tests
+  462  ls -l ../gtest || true
+  463  ls -l | grep gtest || true
+  464  find .. -maxdepth 2 -type f -perm -111 | grep gtest || true
+  465  find /workspace/ucx -type f -perm -111 | grep gtest || true
+  466  find /workspace/ucx -type f -executable | grep -i test || true
+  467  find /workspace/ucx -type f -name '*.so' -o -name '*.a' -o -name '*.la' | grep gaudi || true
+  468  make -C test/gtest | tee gtest_build.log
+  469  ls -l test/gtest | grep gtest || true
+  470  test/gtest/gtest --gtest_list_tests | grep -i gaudi || true
+  471  test/gtest/gtest --gtest_list_tests
+  472  make -C test/gtest | tee gtest_build.log
+  473  ./build.sh
+  474  ls src/uct/gaudi/.libs/libuct_gaudi.la
+  475  ls -lra src/uct/gaudi/.libs/libuct_gaudi.la
+  476  ls -lra src/uct/gaudi/libuct_gaudi.la
+  477  find . -name libuct_gaudi.la
+  478  ls -lra src/uct/gaudi/libuct_gaudi.la
+  479  ls -lra src/uct/gaudi/.libs/libuct_gaudi.la
+  480  ls -lrta src/uct/gaudi/.libs/libuct_gaudi.la
+  481  file src/uct/gaudi/.libs/libuct_gaudi.la src/uct/gaudi/.libs/libuct_gaudi.a
+  482  ls -l src/uct/gaudi/.libs/ ../ | grep libuct_gaudi
+  483  ls -l src/uct/gaudi/.libs/; ls -l src/uct/gaudi/
+  484  ls -l src/uct/gaudi/libuct_gaudi.la
+  485  ./build.sh
+  486  find . -name libuct_gaudi.la
+  487  file ./src/uct/gaudi/.libs/libuct_gaudi.la
+  488  file ./src/uct/gaudi/.libs/libuct_gaudi.a
+  489  find . -name libuct_gaudi.a
+  490  find . -name libucm_gaudi.la
+  491  ./build.sh
+  492  make -C test/gtest clean && make -C test/gtest -j$(nproc) && GTEST_FILTER='*gaudi*' test/gtest/gtest --gtest_filter='*gaudi*'
+  493  test/gtest/gtest --gtest_list_tests | grep -i gaudi || test/gtest/gtest --gtest_list_tests
+  494  test/gtest/gtest --gtest_list_tests
+  495  grep -r "uct_gaudi_" --include="*.h" --include="*.c" --include="*.cc" /workspace/ucx
+  496  find /workspace/ucx/src/uct/gaudi -name "*.h" | xargs -r cat | grep -E "uct_gaudi|GAUDI"
+  497  grep -A 2 "#ifdef" /workspace/ucx/test/gtest/uct/test_gaudi_md.cc
+  498  cat /workspace/ucx/config.h | grep -i GAUDI
+  499  head -n 5 /workspace/ucx/test/gtest/uct/test_gaudi_md.cc
+  500  cd test/gtest && make -j1 uct/gtest-test_gaudi_md.o 2>&1
+  501  cd test/gtest && make -j1 VERBOSE=1 uct/gtest-test_gaudi_md.o 2>&1
+  502  cd /workspace/ucx && make -C test/gtest -j1 VERBOSE=1 uct/gtest-test_gaudi_md.o 2>&1
+  503  test/gtest/gtest --gtest_list_tests
+  504  cd /workspace/ucx && autoreconf -i
+  505  cd /workspace/ucx && ./configure --prefix=/tmp/ucx && make -j$(nproc) V=1
+  506  cat build.sh
+  507  cat build_gaudi.sh
+  508  cat configure_gaudi.sh
+  509  find . -name "test_gaudi_md.cc" | xargs ls -l
+  510  find . -name "test_gaudi*.cc" 2>/dev/null
+  511  find test/gtest/uct -type f -name "*.cc" | sort | head -10
+  512  find src/uct/gaudi -type f -name "*.c" -or -name "*.h" | sort
+  513  ls -la src/uct/gaudi/
+  514  find src/uct -name "gaudi_*.c" | sort
+  515  ls -la src/uct/gaudi/base/ src/uct/gaudi/copy/
+  516  cat test/gtest/uct/test_gaudi_md.cc
+  517  make clean && ./build.sh
+  518  test/gtest/gtest --gtest_list_tests | grep -i gaudi
+  519  GTEST_FILTER='*gaudi*' test/gtest/gtest
+  520  cat test/gtest/uct/test_gaudi_md.cc
+  521  grep -A 2 HAVE_GAUDI config.h
+  522  cd test/gtest && make && GTEST_FILTER='*gaudi*' ./gtest
+  523  src/tools/info/ucx_info -d | grep gaudi -i
+  524  find . -name ucx_info
+  525  cd /workspace
+  526  find . -name ucx_info
+  527  ./ucx/src/tools/info/ucx_info -d
+  528  ./ucx/src/tools/info/ucx_info -d | grep -i gaudi
+  529  ./ucx/src/tools/info/ucx_info -c | grep -i gaudi
+  530  ./ucx/src/tools/info/ucx_info -v
+  531  ./ucx/src/tools/info/ucx_info -f
+  532  cd /workspace/ucx && ./test/gtest/gtest --gtest_filter="*gaudi*"
+  533  cd /workspace/ucx && grep -i "gaudi" config.h || echo "HAVE_GAUDI not defined"
+  534  cd /workspace/ucx && cat config.h | grep "HAVE_GAUDI" || echo "HAVE_GAUDI not defined"
+  535  cd /workspace/ucx && ./src/tools/info/ucx_info -c
+  536  cd /workspace/ucx && cat config.log | grep -A 5 -B 5 "with-gaudi"
+  537  grep -n "HAVE_GAUDI" /workspace/ucx/config.h
+  538  ls -la /workspace/ucx/src/uct/gaudi/
+  539  find /workspace/ucx/src -name gaudi -type d
+  540  find /workspace/ucx/src/uct/gaudi -type f | xargs ls -la
+  541  ls -la /workspace/ucx/src/uct/gaudi
+  542  find /workspace/ucx/src/uct/gaudi/copy -type f
+  543  find /workspace/ucx/test -name "Makefile.am" | grep -v CMakeFiles
+  544  find /workspace/ucx/test -name "Makefile" | xargs grep -l "test_gaudi_md"
+  545  find /usr -name "hlthunk.h"
+  546  ldconfig -p | grep hl-thunk
+  547  cd /workspace/ucx && gcc -o test_hlthunk test_hlthunk.c -lhl-thunk
+  548  sudo apt-get update && sudo apt-get install -y libdrm-dev
+  549  pkg-config --list-all | grep drm
+  550  find /usr -name "drm.h"
+  551  cd /workspace/ucx && gcc -o test_hlthunk test_hlthunk.c -lhl-thunk -I/usr/include/drm
+  552  cd /workspace/ucx && gcc -v -o test_hlthunk test_hlthunk.c -lhl-thunk -I/usr/include/drm
+  553  find /usr -name "libhl-thunk*"
+  554  cd /workspace/ucx && gcc -o test_hlthunk test_hlthunk.c -I/usr/include/drm -L/usr/lib/habanalabs -lhl-thunk
+  555  cd /workspace/ucx && LD_LIBRARY_PATH=/usr/lib/habanalabs ./test_hlthunk
+  556  cd /workspace/ucx && ./configure --with-gaudi=/usr --enable-gtest --enable-debug --enable-verbose-configure
+  557  cd /workspace/ucx && mkdir -p habanalabs && ln -s /usr/include/habanalabs/hlthunk.h habanalabs/ && ln -s /usr/include/habanalabs/drm habanalabs/
+  558  cd /workspace/ucx && CPPFLAGS="-I/workspace/ucx -I/usr/include/drm" ./configure --with-gaudi=/usr --enable-gtest --enable-debug
+  559  grep -n "HAVE_GAUDI" /workspace/ucx/config.h
+  560  grep -r "HAVE_GAUDI" /workspace/ucx/
+  561  tail -n 200 /workspace/ucx/config.h
+  562  grep -n "HAVE_GAUDI" /workspace/ucx/config.status
+  563  grep -n "if HAVE_GAUDI" /workspace/ucx/src/uct/gaudi/Makefile
+  564  grep -n "gaudi" /workspace/ucx/config.h | grep MODULES
+  565  find /workspace/ucx/test -name "*gaudi*"
+  566  cd /workspace/ucx && find . -name "*.o" | grep -i gaudi | head -20
+  567  cd /workspace/ucx && make V=1 | grep -i gaudi
+  568  cd /workspace/ucx && make
+  569  cd /workspace/ucx && find . -name "*.o" -o -name "*.lo" | grep -i gaudi
+  570  cd /workspace/ucx && find . -name "*gaudi*" | grep -v ".c\$" | grep -v ".h\$" | grep -v ".cc\$" | sort
+  571  cd /workspace/ucx && ./test/gtest/gtest --gtest_list_tests | grep -i gaudi
+  572  cd /workspace/ucx && grep -r "#define HAVE_GAUDI" .
+  573  cd /workspace/ucx && echo "#define HAVE_GAUDI 1" >> config.h
+  574  cd /workspace/ucx && make
+  575  cd /workspace/ucx && ./test/gtest/gtest --gtest_list_tests | grep -i gaudi
+  576  cd /workspace/ucx && cd test/gtest/uct && nm gtest-test_gaudi_md.o
+  577  cd /workspace/ucx && find . -name "*.am" | xargs grep -l test_gaudi_md
+  578  cd /workspace/ucx && find test/gtest -name Makefile.am
+  579  cd /workspace/ucx && find test/gtest -name Makefile | xargs head -n 20
+  580  cd /workspace/ucx && find . -name "*.cc" | grep -v test_gaudi_md | grep -l "UCT_MD_INSTANTIATE_TEST_CASE" | head -2
+  581  cd /workspace/ucx && grep -r "test_md\\.cc" .
+  582  cd /workspace/ucx && grep -n "gtest_SOURCES" test/gtest/Makefile.am
+  583  cd /workspace/ucx && ./autogen.sh
+  584  cd /workspace/ucx && CPPFLAGS="-I/workspace/ucx -I/usr/include/drm -DHAVE_GAUDI=1" ./configure --with-gaudi=/usr --enable-gtest --enable-debug
+  585  cd /workspace/ucx && make -j$(nproc)
+  586  find /workspace/ucx -name "*gaudi*" | grep -v "\.c$\|\.cc$\|\.h$"
+  587  find /workspace/ucx -name "*.lo" -o -name "*.o" | grep -i gaudi
+  588  find /workspace/ucx/src/ucm/gaudi -type f && find /workspace/ucx/src/uct/gaudi -type f 2>/dev/null
+  589  cd /workspace/ucx && ./test/gtest/gtest --gtest_filter="*gaudi*" -v
+  590  cd /workspace/ucx && ./test/gtest/gtest --gtest_list_tests | grep -i gaudi
+  591  cd /workspace/ucx && grep -r "UCT_MD_INSTANTIATE_TEST_CASE" --include="*.h" .
+  592  cd /workspace/ucx && grep -r "UCT_MD_INSTANTIATE_TEST_CASE" --include="*.cc" .
+  593  cd /workspace/ucx && grep -r "INSTANTIATE_TEST" --include="*.cc" ./test/gtest/uct/
+  594  cd /workspace/ucx && grep -A20 "UCT_MD_INSTANTIATE_TEST_CASE" test/gtest/uct/test_md.cc
+  595  cd /workspace/ucx && grep -r "_UCT_MD_INSTANTIATE_TEST_CASE" --include="*.h" --include="*.cc" .
+  596  cd /workspace/ucx && grep -r "UCS_PP_FOREACH" --include="*.h" src/ucs/
+  597  cd /workspace/ucx && find . -name "*.h" -exec grep -l "UCS_PP_FOREACH" {} \;
+  598  cd /workspace/ucx && find test -name "gtest-test_gaudi_md*"
+  599  cd /workspace/ucx && grep -r "gaudi" test/gtest/uct/test_md.cc
+  600  cd /workspace/ucx && make -j
+  601  cd /workspace/ucx && ./test/gtest/gtest --gtest_list_tests | grep -i gaudi
+  602  cd /workspace/ucx && find . -name "gtest-test_gaudi_md*"
+  603  cd /workspace/ucx && ./autogen.sh
+  604  cd /workspace/ucx && ./configure --with-gaudi=/usr --enable-gtest --enable-debug && make -j 4
+  605  cd /workspace/ucx && ./configure --with-gaudi=/usr --enable-gtest --enable-debug
+  606  ./build.sh
+  607  cd /workspace/ucx && chmod +x build.sh && ./build.sh
+  608  cd /workspace/ucx && bash -x ./build.sh
+  609  cd /workspace/ucx && ./build.sh
+  610  cd /workspace/ucx && sed -i '/#define UCT_MD_INSTANTIATE_TEST_CASE/,/rdmacm/s/rdmacm *$/rdmacm, \\\n                   gaudi \\/' test/gtest/uct/test_md.cc && make -j$(nproc)
+  611  cd /workspace/ucx && CPPFLAGS="-I/usr/include/habanalabs -I/usr/include" ./configure --with-gaudi=/usr --enable-gtest --enable-debug && make clean && make -j$(nproc)
+  612  cd /workspace/ucx && grep -A20 "#define UCT_MD_INSTANTIATE_TEST_CASE" test/gtest/uct/test_md.cc
+  613  cd /workspace/ucx && ls -l test/gtest/uct/test_md.cc
+  614  cd /workspace/ucx && mv test/gaudi_md_new.cc test/gtest/uct/test_gaudi_md.cc && chmod 644 test/gtest/uct/test_gaudi_md.cc && ./build.sh
+  615  cd /workspace/ucx && cat test/gtest/uct/test_gaudi_md.cc
+  616  cd /workspace/ucx && make -j
+  617  cd /workspace/ucx && grep -A5 -B5 _UCT_MD_INSTANTIATE_TEST_CASE test/gtest/uct/test_md.h
+  618  cd /workspace/ucx && make -j
+  619  cd /workspace/ucx && ./build_gaudi.sh
+  620  chmod +x /workspace/ucx/build_gaudi.sh
+  621  cd /workspace/ucx && ./build_gaudi.sh
+  622  cd /workspace/ucx && CPPFLAGS="-I/usr/include/habanalabs -I/usr/include/drm -DHAVE_GAUDI=1" LDFLAGS="-L/usr/lib/habanalabs" ./configure --with-gaudi=/usr --enable-gtest --enable-debug  --disable-dependency-tracking && make
+  623  git status
+  624  cd /workspace/ucx && ./autogen.sh
+  625  cd /workspace/ucx && CPPFLAGS="-I/usr/include/habanalabs -I/usr/include/drm -DHAVE_GAUDI=1" LDFLAGS="-L/usr/lib/habanalabs" ./configure --with-gaudi=/usr --enable-gtest --enable-debug --disable-dependency-tracking && make -j$(nproc)
+  626  git status
+  627  file ./libuct_gaudi.a
+  628  nm -D ./libuct_gaudi.a
+  629  nm -g ./libuct_gaudi.a
+  630  nm -A ./libuct_gaudi.a
+  631  objdump -t ./libuct_gaudi.a
+  632  objdump -t ./libuct_gaudi.la
+  633  ls
+  634  file libuct_gaudi.la
+  635  rm -rf ./libuct_gaudi.la
+  636  ls
+  637  cd ..
+  638  ls
+  639  cd ..
+  640  find . -name gaudi_md.h
+  641  CPPFLAGS="-I/usr/include/habanalabs -I/usr/include/drm -DHAVE_GAUDI=1" LDFLAGS="-L/usr/lib/habanalabs" ./configure --with-gaudi=/usr --enable-gtest --enable-debug --disable-dependency-tracking && make -j$(nproc)
+  642  git status
+  643  git diff build.sh
+  644  git add build.sh
+  645  ls
+  646  git status
+  647  git diff src/ucm/gaudi/gaudimem.h
+  648  git add src/ucm/gaudi/gaudimem.h
+  649  git diff src/ucm/gaudi/gaudimem.c
+  650  git diff src/uct/gaudi/Makefile.am
+  651  git satus
+  652  git status
+  653  git add src/uct/gaudi/Makefile.am
+  654  git status src/uct/gaudi/copy/gaudi_copy_ep.c
+  655  git diff src/uct/gaudi/copy/gaudi_copy_ep.c
+  656  git diff
+  657  git status
+  658  git add src/uct/gaudi/copy/gaudi_copy_ep.c
+  659  git add src/uct/gaudi/copy/gaudi_copy_iface.c
+  660  git add src/uct/gaudi/copy/gaudi_copy_md.c
+  661  git add src/uct/gaudi/gaudi_config.c 
+  662  git add src/uct/gaudi/gaudi_device.c 
+  663  git status
+  664  git commit -m "one step forward."
+  665  git status
+  666  git clean -fix
+  667  ls
+  668  git status
+  669  git diff test/gtest/Makefile.am 
+  670  ls
+  671  git status
+  672  git restore test/*
+  673  git status
+  674  ls habanalabs/
+  675  cd ..
+  676  ls
+  677  cd 
+  678  ls
+  679  cd /workspace
+  680  ls
+  681  cd ucx
+  682  ls
+  683  ./build.sh
+  684  git status
+  685  ./build.sh
+  686  grep -rH test_gaudi.cc
+  687  ./build.sh
+  688  grep -rH uct/test_gaudi_md.cc
+  689  make clean
+  690  grep -rH uct/test_gaudi_md.cc
+  691  ./autogen.sh 
+  692  ./build.sh
+  693  grep -rh "uct/test_gaudi_md.cc" *
+  694  grep -rF "uct/test_gaudi_md.cc" *
+  695  ./build.sh
+  696  cd /workspace/ucx && autoreconf -i
+  697  cd /workspace/ucx && CPPFLAGS="-I/usr/include/habanalabs -I/usr/include/drm -DHAVE_GAUDI=1" LDFLAGS="-L/usr/lib/habanalabs" ./configure --with-gaudi=/usr --enable-gtest --enable-debug --disable-dependency-tracking
+  698  cd /workspace/ucx && make -j8
+  699  cd /workspace/ucx && ./test/gtest/gtest --gtest_list_tests | grep -i gaudi
+  700  git status
+  701  git add -u
+  702  git commit --amend
+  703  git push
+  704  cd /workspace/ucx && ./test/gtest/gtest --gtest_list_tests | grep -i gaudi
+  705  cd /workspace/ucx && autoreconf -i
+  706  cd /workspace/ucx && CPPFLAGS="-I/usr/include/habanalabs -I/usr/include/drm -DHAVE_GAUDI=1" LDFLAGS="-L/usr/lib/habanalabs" ./configure --with-gaudi=/usr --enable-gtest --enable-debug --disable-dependency-tracking && make -j8
+  707  cd /workspace/ucx && test/gtest/gtest --gtest_filter="*gaudi*"
+  708  cd /workspace/ucx && test/gtest/gtest --gtest_list_tests
+  709  cd /workspace/ucx && UCX_LOG_LEVEL=debug test/gtest/gtest --gtest_filter="*gaudi*" --gtest_also_run_disabled_tests
+  710  chmod +x build_gaudi_test.sh
+  711  ./build_gaudi_test.sh
+  712  cd /workspace/ucx && cat config.log | grep -i gaudi
+  713  cd /workspace/ucx && find . -name "*gaudi*"
+  714  ls -la /usr/lib/habanalabs
+  715  ls -la /dev/hl*
+  716  hl-smi
+  717  find /usr -name "hl-*" 2>/dev/null
+  718  hl-smi
+  719  ls -la /dev/habana* /dev/*audi* /dev/*abana* 2>/dev/null || echo "No matching devices found"
+  720  lsmod | grep habana
+  721  cd /workspace/ucx/examples && bash ../build_gaudi_test.sh && ./gaudi_test
+  722  cd /workspace/ucx && bash ./build_gaudi_test.sh
+  723  cd /workspace/ucx && find . -name "libuct_gaudi.so" | xargs ls -la
+  724  cd /workspace/ucx && find ./modules -type f | xargs ls -la
+  725  cd /workspace/ucx && nm -D ./modules/libuct_gaudi.so | grep uct_component
+  726  cd /workspace/ucx && nm -D ./modules/libuct_gaudi.so | grep -i gaudi
+  727  cd /workspace/ucx && bash ./build_gaudi_test.sh
+  728  cd /workspace/ucx && nm -g modules/libuct_gaudi.so | grep '_component'
+  729  cd /workspace/ucx && export UCX_MODULE_DIR=$PWD/modules && strace -e trace=file,desc ./src/tools/info/ucx_info -v -d
+  730  apt install strace
+  731  cd /workspace/ucx && LD_DEBUG=all UCX_MODULE_DIR=$PWD/modules UCX_MODULE_LOADING=debug UCX_LOG_LEVEL=trace LD_LIBRARY_PATH=$PWD/src/uct/.libs:$PWD/src/ucs/.libs:$PWD/src/ucm/.libs:$LD_LIBRARY_PATH ./examples/gaudi_test 2>&1 | grep -i gaudi
+  732  cd /workspace/ucx && UCX_MODULE_DIR=$PWD/modules UCX_MODULE_LOADING=debug UCX_LOG_LEVEL=trace ./examples/gaudi_test 2>&1 | grep -A 2 -B 2 "loading module"
+  733  ls -l /workspace/ucx/examples/gaudi_test
+  734  ls -l /workspace/ucx/examples/Makefile.gaudi
+  735  cd /workspace/ucx/examples && make -f Makefile.gaudi
+  736  ls -l /workspace/ucx/examples/gaudi_test
+  737  cd /workspace/ucx/examples && make -f Makefile.gaudi V=1
+  738  ls -la /workspace/ucx/examples/gaudi_test.c
+  739  ls -la /workspace/ucx/examples/
+  740  cd /workspace/ucx && UCX_MODULE_DIR=$PWD/modules UCX_MODULE_LOADING=debug UCX_LOG_LEVEL=trace ./examples/gaudi_test
+  741  cd /workspace/ucx && UCX_MODULE_DIR=$PWD/modules UCX_MODULE_LOADING=debug UCX_LOG_LEVEL=trace LD_LIBRARY_PATH=$PWD/src/uct/.libs:$PWD/src/ucs/.libs:$PWD/src/ucm/.libs ./examples/gaudi_test
+  742  cd /workspace/ucx && bash -x -c 'UCX_MODULE_DIR=$PWD/modules UCX_MODULE_LOADING=debug UCX_LOG_LEVEL=trace LD_LIBRARY_PATH=$PWD/src/uct/.libs:$PWD/src/ucs/.libs:$PWD/src/ucm/.libs ./examples/gaudi_test'
+  743  ls -l /workspace/ucx/modules/libuct_gaudi.so*
+  744  find /workspace/ucx -name "libuct_*.so*" | sort
+  745  nm -D /workspace/ucx/modules/libuct_gaudi.so | grep -i gaudi
+  746  nm -D /workspace/ucx/modules/libuct_gaudi.so | grep ' T '
+  747  cd /workspace/ucx/examples && make -f Makefile.gaudi && cd .. && UCX_MODULE_DIR=$PWD/modules UCX_MODULE_LOADING=debug UCX_LOG_LEVEL=trace LD_LIBRARY_PATH=$PWD/src/uct/.libs:$PWD/src/ucs/.libs:$PWD/src/ucm/.libs ./examples/gaudi_test
+  748  cd /workspace/ucx && bash -x -c 'cd examples && make -f Makefile.gaudi && cd .. && UCX_MODULE_DIR=$PWD/modules UCX_MODULE_LOADING=debug UCX_LOG_LEVEL=trace LD_LIBRARY_PATH=$PWD/src/uct/.libs:$PWD/src/ucs/.libs:$PWD/src/ucm/.libs ./examples/gaudi_test'
+  749  nm -D /workspace/ucx/src/ucs/.libs/libucs.so | grep ucs_align_up_pow2
+  750  nm -D /workspace/ucx/src/ucs/.libs/libucs.so | grep align
+  751  find /workspace/ucx -name "*gaudi*" | grep -v "\.so" | grep -v "\.o"
+  752  ls -l /workspace/ucx/src/uct/gaudi/
+  753  ls -l /workspace/ucx/src/uct/gaudi/copy/
+  754  find /workspace/ucx/src/uct/gaudi -type f -name "*.c" | xargs head -n 5
+  755  find /workspace/ucx/src/uct/gaudi -type f
+  756  cd /workspace/ucx && ./build_gaudi.sh
+  757  cd /workspace/ucx && chmod +x build_gaudi.sh && ./build_gaudi.sh
+  758  cd /workspace/ucx && make clean && CPPFLAGS="-I/usr/include/habanalabs -I/usr/include/drm -DHAVE_GAUDI=1" LDFLAGS="-L/usr/lib/habanalabs" ./configure --with-gaudi=/usr --enable-debug && make -j$(nproc)
+  759  find /workspace/ucx/src -name "*gaudi*" -type d | sort
+  760  find /workspace/ucx -name "*gaudi*" -type f | sort
+  761  cd /workspace/ucx && ./configure --with-gaudi --with-rdmacm --with-verbs --with-rc --with-ud --prefix=/usr/local && make -j$(nproc) && make install
+  762  find /usr -name "habanalabs*.h" -o -name "*gaudi*.h" 2>/dev/null
+  763  find /usr -name "hlthunk.h" 2>/dev/null
+  764  find /usr/include -name "*habana*" -o -name "*gaudi*" -o -name "*hl*" | grep -v "html\|highlight"
+  765  ls -la /usr/include/habanalabs/hlthunk.h
+  766  find /usr -name "libhl-thunk*"
+  767  mkdir -p /usr/include/habanalabs/drm
+  768  ls -la /usr/include/habanalabs/
+  769  ls -la /usr/include/habanalabs/drm/
+  770  CPPFLAGS="-I/usr/include/habanalabs -I/usr/include/drm -DHAVE_GAUDI=1" LDFLAGS="-L/usr/lib/habanalabs" cd /workspace/ucx && ./configure --with-gaudi --with-rdmacm --with-verbs --with-rc --with-ud --prefix=/usr/local && make -j$(nproc) && make install
+  771  cd /workspace/ucx && CPPFLAGS="-I/usr/include/habanalabs -I/usr/include/drm -DHAVE_GAUDI=1" LDFLAGS="-L/usr/lib/habanalabs" ./configure --with-gaudi --with-rdmacm --with-verbs --with-rc --with-ud --prefix=/usr/local V=1
+  772  cd /workspace/ucx && make -j$(nproc)
+  773  cd /workspace/ucx && make install
+  774  ls -la /usr/local/lib/ucx/ | grep gaudi
+  775  find /usr/local -name "libuct_gaudi*" || echo "Not found"
+  776  ls -la /workspace/ucx/modules/ | grep gaudi
+  777  export LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib/ucx:$LD_LIBRARY_PATH && ucx_info -d
+  778  export LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib/ucx:$LD_LIBRARY_PATH && ucx_info -v
+  779  which ucx_info && file $(which ucx_info)
+  780  export LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib/ucx:$LD_LIBRARY_PATH && /usr/local/bin/ucx_info -v
+  781  export LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib/ucx:$LD_LIBRARY_PATH && /usr/local/bin/ucx_info -v 2>&1 || echo "Error running ucx_info"
+  782  ldd /usr/local/bin/ucx_info
+  783  export LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib/ucx:$LD_LIBRARY_PATH && /usr/local/bin/ucx_info -h
+  784  strace -f /usr/local/bin/ucx_info 2>&1 | head -n 100
+  785  sudo cp /workspace/ucx/modules/libuct_gaudi.so /usr/local/lib/ucx/
+  786  cp /workspace/ucx/modules/libuct_gaudi.so /usr/local/lib/ucx/
+  787  cd /workspace/ucx/examples && make -f Makefile.gaudi
+  788  cd /workspace/ucx/examples && export LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib/ucx:$LD_LIBRARY_PATH && ./gaudi_test
+  789  chmod +x /workspace/ucx/build_gaudi_fixed.sh
+  790  find /workspace/ucx/src/uct/gaudi -type f -exec grep -l "ucs_align_up_pow2" {} \;
+  791  nm -u /workspace/ucx/modules/libuct_gaudi.so | grep ucs_align
+  792  nm -u /workspace/ucx/modules/libuct_gaudi.so
+  793  cd /workspace/ucx && patch -p1 < gaudi_include_fix.patch || echo "Patch failed - file might not exist"
+  794  find /workspace/ucx -name gaudi_copy_md.c || echo "File not found"
+  795  find /workspace/ucx/src/uct/gaudi -type f
+  796  cd /workspace/ucx && ./build_gaudi_fixed.sh
+  797  grep -r "define.*ucs_align_up_pow2" --include="*.h" /workspace/ucx/src/
+  798  grep -r "ucs_align_up_pow2" --include="*.h" /workspace/ucx/src/
+  799  find /workspace/ucx/src/ -type f -exec grep -l "ucs_align_up_pow2" {} \;
+  800  ldd -r /workspace/ucx/modules/libuct_gaudi.so
+  801  ls -la /usr/local/lib/ucx/
+  802  chmod +x /workspace/ucx/build_gaudi_fixed.sh
+  803  cd /workspace/ucx && ./build_gaudi_fixed.sh
+  804  ls -la /usr/lib/habanalabs/libhl-thunk.so
+  805  find /usr -name "libhl-thunk.so"
+  806  ls -la /usr/lib/habanalabs/libhl-thunk.so
+  807  mkdir -p /usr/local/lib/ucx && cp /workspace/ucx/modules/libuct_gaudi.so /usr/local/lib/ucx/
+  808  cd /workspace/ucx/examples && make -f Makefile.gaudi
+  809  ls -la /workspace/ucx/examples/gaudi_test
+  810  cd /workspace/ucx/examples && make -f Makefile.gaudi VERBOSE=1
+  811  cd /workspace/ucx/examples && gcc -Wall -Werror -I/usr/local/include -I/usr/include/habanalabs -I/usr/include/drm gaudi_test.c -o gaudi_test -L/usr/local/lib -L/usr/local/lib/ucx -L/usr/lib/habanalabs -Wl,-rpath=/usr/local/lib -Wl,-rpath=/usr/local/lib/ucx -Wl,-rpath=/usr/lib/habanalabs -luct -lucs -lucm -lucp -ldl -lpthread -lhl-thunk
+  812  ls -la /workspace/ucx/examples/gaudi_test
+  813  cd /workspace/ucx/examples && rm -f *.o gaudi_test
+  814  cd /workspace/ucx/examples && gcc -v -Wall -I/usr/local/include -I/usr/include/habanalabs -I/usr/include/drm -c gaudi_test.c
+  815  cd /workspace/ucx/examples && gcc -v -Wall gaudi_test.o -o gaudi_test -L/usr/local/lib -L/usr/local/lib/ucx -L/usr/lib/habanalabs -Wl,-rpath=/usr/local/lib -Wl,-rpath=/usr/local/lib/ucx -Wl,-rpath=/usr/lib/habanalabs -luct -lucs -lucm -lucp -ldl -lpthread -lhl-thunk
+  816  ls -la /workspace/ucx/examples/gaudi_test
+  817  cd /workspace/ucx/examples && gcc -Wall gaudi_test.o -o gaudi_test -L/usr/local/lib -L/usr/local/lib/ucx -L/usr/lib/habanalabs -Wl,-rpath=/usr/local/lib -Wl,-rpath=/usr/local/lib/ucx -Wl,-rpath=/usr/lib/habanalabs -luct -lucs -lucm -lucp -ldl -lpthread -lhl-thunk 2>&1
+  818  ls -la /workspace/ucx/examples/gaudi_test.o
+  819  ./gaudi_test 
+  820  ls
+  821  cd test_output/
+  822  ls
+  823  ./gaudi_hw_test 
+  824  make -f test_gaudi_md.Makefile
+  825  pwd
+  826  ls
+  827  cd ..
+  828  ls
+  829  ./gaudi_test_final
+  830  cd /workspace/ucx && make -j$(nproc)
+  831  cd src/uct/gaudi
+  832  cd .libs
+  833  ls
+  834  ldd -r libuct_gaudi.so
+  835  ldd -r libuct_gaudi.a
+  836  chmod +x /workspace/ucx/run_gaudi_test.sh
+  837  cd /workspace/ucx && make -f test_gaudi_md.Makefile
+  838  cd /workspace/ucx && make -f test_gaudi_md.Makefile VERBOSE=1
+  839  cd /workspace/ucx && pkg-config --cflags --libs ucx 2>&1 || echo "pkg-config failed"
+  840  cd /workspace/ucx && make -f test_gaudi_md.Makefile
+  841  cd /workspace/ucx && gcc -Wall -g -I. -Isrc test_gaudi_md.c -o test_gaudi_md -L./src/ucp/.libs -L./src/uct/.libs -L./src/ucs/.libs -L./src/ucm/.libs -lucp -luct -lucs -lucm -lhlthunk -Wl,-rpath,./src/ucp/.libs:./src/uct/.libs:./src/ucs/.libs:./src/ucm/.libs
+  842  cd /workspace/ucx && gcc -Wall -g -I. -Isrc test_gaudi_simple.c -o test_gaudi_simple -L./src/ucp/.libs -L./src/uct/.libs -L./src/ucs/.libs -L./src/ucm/.libs -lucp -luct -lucs -lucm -lhlthunk -Wl,-rpath,./src/ucp/.libs:./src/uct/.libs:./src/ucs/.libs:./src/ucm/.libs
+  843  cd /workspace/ucx && gcc -Wall -g -I. -Isrc test_gaudi_check.c -o test_gaudi_check -L./src/ucp/.libs -L./src/uct/.libs -L./src/ucs/.libs -L./src/ucm/.libs -lucp -luct -lucs -lucm -Wl,-rpath,./src/ucp/.libs:./src/uct/.libs:./src/ucs/.libs:./src/ucm/.libs
+  844  cd /workspace/ucx && LD_LIBRARY_PATH=./src/ucp/.libs:./src/uct/.libs:./src/ucs/.libs:./src/ucm/.libs ./test_gaudi_check
+  845  cd /workspace/ucx && gcc -Wall -g -I. -Isrc test_gaudi_full.c -o test_gaudi_full -L./src/ucp/.libs -L./src/uct/.libs -L./src/ucs/.libs -L./src/ucm/.libs -lucp -luct -lucs -lucm -lhlthunk -Wl,-rpath,./src/ucp/.libs:./src/uct/.libs:./src/ucs/.libs:./src/ucm/.libs
+  846  find / -name "*hlthunk*" 2>/dev/null || echo "No hlthunk library found"
+  847  cd /workspace/ucx && gcc -Wall -g -I. -Isrc gaudi_test_final.c -o gaudi_test_final -L./src/ucp/.libs -L./src/uct/.libs -L./src/ucs/.libs -L./src/ucm/.libs -lucp -luct -lucs -lucm -Wl,-rpath,./src/ucp/.libs:./src/uct/.libs:./src/ucs/.libs:./src/ucm/.libs
+  848  cd /workspace/ucx && LD_LIBRARY_PATH=./src/ucp/.libs:./src/uct/.libs:./src/ucs/.libs:./src/ucm/.libs ./gaudi_test_final
+  849  find / -name "libhlthunk.so*" 2>/dev/null || echo "hlthunk library not found"
+  850  find / -name "libhl-thunk.so*" 2>/dev/null || echo "hlthunk library not found"
+  851  cd /workspace/ucx && gcc -Wall -g -I. -Isrc gaudi_test_final.c -o gaudi_test_final -L./src/ucp/.libs -L./src/uct/.libs -L./src/ucs/.libs -L./src/ucm/.libs -lucp -luct -lucs -lucm -L/usr/lib/habanalabs -lhl-thunk -Wl,-rpath,./src/ucp/.libs:./src/uct/.libs:./src/ucs/.libs:./src/ucm/.libs:/usr/lib/habanalabs
+  852  find / -name "hlthunk.h" 2>/dev/null || echo "hlthunk header not found"
+  853  find /usr/include -name "*habana*" -o -name "*hl*thunk*" 2>/dev/null
+  854  cd /workspace/ucx && make -f gaudi_test_final.Makefile
+  855  find . -name drm.h
+  856  find / -name drm.h
+  857  cd /workspace/ucx && make -f gaudi_test.Makefile
+  858  ls
+  859  cd /drv
+  860  ls
+  861  cd /dev
+  862  cd dri
+  863  ls
+  864  ls -lra
+  865  cd /workspace/ucx && make -f gaudi_test.Makefile
+  866  cd /workspace/ucx && make -f gaudi_test_final.Makefile
+  867  cd /workspace/ucx && make -f gaudi_test_final.Makefile run
+  868  cd /workspace/ucx && make -f gaudi_test_final.Makefile
+  869  cd /workspace/ucx && make -f gaudi_test_final.Makefile run
+  870  cd /workspace/ucx && LD_LIBRARY_PATH=/workspace/ucx/src/ucp/.libs:/workspace/ucx/src/uct/.libs:/workspace/ucx/src/ucs/.libs:/workspace/ucx/src/ucm/.libs ./gaudi_test_final
+  871  chmod +x /workspace/ucx/check_gaudi_status.sh
+  872  cd /workspace/ucx && ./check_gaudi_status.sh
+  873  lspci -v | grep -A 10 -i habana
+  874  find /dev -name "*habana*" -o -name "*hl*" 2>/dev/null || echo "No habanalabs device nodes found"
+  875  find /dev -name "*habana*"
+  876  cd /sys/
+  877  ls
+  878  cd class
+  879  ls
+  880  cd /dev
+  881  ls
+  882  ls -la /dev/habanalabs* 2>/dev/null || echo "No /dev/habanalabs device nodes found"
+  883  cd /workspace/ucx && LD_LIBRARY_PATH=/workspace/ucx/src/ucp/.libs:/workspace/ucx/src/uct/.libs:/workspace/ucx/src/ucs/.libs:/workspace/ucx/src/ucm/.libs:/usr/lib/habanalabs ./gaudi_test_final
+  884  chmod +x /workspace/ucx/check_gaudi_hardware.sh
+  885  chmod +x /workspace/ucx/test_gaudi_module.sh
+  886  cd /workspace/ucx && ./test_gaudi_module.sh
+  887  chmod +x /workspace/ucx/verify_gaudi.sh
+  888  cd /workspace/ucx && ./verify_gaudi.sh
+  889  chmod +x /workspace/ucx/simple_module_check.sh && cd /workspace/ucx && ./simple_module_check.sh
+  890  ls -la /workspace/ucx/install/lib/ucx/
+  891  find /workspace/ucx/install -type d | sort
+  892  ls -la /workspace/ucx/install
+  893  ls -la /workspace/ucx/install/lib
+  894  find /workspace/ucx -name "libuct_gaudi*"
+  895  cd /workspace/ucx && ./simple_module_check.sh
+  896  cd /workspace/ucx && gcc -o list_ucx_mds list_ucx_mds.c -L/workspace/ucx/install/lib -I/workspace/ucx/install/include -luct -lucs && LD_LIBRARY_PATH=/workspace/ucx/install/lib:$LD_LIBRARY_PATH ./list_ucx_mds
+  897  find /workspace/ucx/install/include -type f | xargs ls -la
+  898  cd /workspace/ucx && file modules/libuct_gaudi.so
+  899  cd /workspace/ucx && file src/uct/gaudi/.libs/libuct_gaudi.so.0.0.0
+  900  ls -la /workspace/ucx/src/uct/gaudi/.libs/libuct_gaudi.so.0.0.0
+  901  cd /workspace/ucx && readlink -f modules/libuct_gaudi.so
+  902  echo "# UCX Gaudi Module Development
+  903  The module structure and implementation for UCX Gaudi support has been completed.
+  904  Key components:
+  905  - Memory domain implementation in src/uct/gaudi/
+  906  - Component registration structure
+  907  - Hardware detection logic
+  908  - Documentation in docs/gaudi_module_usage.md
+  909  The module builds successfully but may require additional configuration for final linking.
+  910  To proceed with this project:
+  911  1. Complete the module build process
+  912  2. Finalize memory operations implementation
+  913  3. Test with actual Gaudi hardware
+  914  4. Integrate with higher-level UCX components
+  915  See GAUDI_PROJECT_SUMMARY.md and GAUDI_MODULE_STATUS.md for more details." > /workspace/ucx/README.gaudi
+  916  ls ./modules/libuct_gaudi.so
+  917  ls -lra ./modules/libuct_gaudi.so
+  918  ls -lra src/uct/gaudi/.libs/libuct_gaudi.so.0.0.0 
+  919  chmod +x /workspace/ucx/run_gaudi_tests.sh
+  920  cd /workspace/ucx && ./run_gaudi_tests.sh
+  921  chmod +x /workspace/ucx/direct_gaudi_test.sh
+  922  cd /workspace/ucx && ./direct_gaudi_test.sh
+  923  cd /workspace/ucx && gcc -o test_output/gaudi_hw_test test_output/gaudi_hw_test.c -I/workspace/ucx/install/include -L/workspace/ucx/install/lib -luct -lucs -Wall
+  924  cd /workspace/ucx && gcc -o test_output/gaudi_hw_test test_output/gaudi_hw_test.c -I/workspace/ucx/install/include -L/workspace/ucx/install/lib -luct -lucs -Wall -v
+  925  cd /workspace/ucx && ls -la test_output/
+  926  cd /workspace/ucx && gcc -o test_output/gaudi_simplified_test test_output/gaudi_simplified_test.c -ldl && ./test_output/gaudi_simplified_test
+  927  cd /workspace/ucx && gcc -o test_output/gaudi_hw_test test_output/gaudi_hw_test.c -ldl && ./test_output/gaudi_hw_test
+  928  cd /workspace/ucx && find . -name "*.so" | grep -E 'uct|ucs'
+  929  cd /workspace/ucx && gcc -o test_output/gaudi_hw_test test_output/gaudi_hw_test.c -ldl && LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/workspace/ucx/src/uct/.libs:/workspace/ucx/src/ucs/.libs ./test_output/gaudi_hw_test
+  930  cd /workspace/ucx && chmod +x test_output/direct_gaudi_test.sh && ./test_output/direct_gaudi_test.sh
+  931  cd /workspace/ucx && echo '
+  932  #!/bin/bash
+  933  echo "Testing Gaudi module"
+  934  echo
+  935  echo "1. Checking Gaudi hardware"
+  936  lspci -d 1da3: | wc -l
+  937  echo
+  938  echo "2. Checking kernel driver"
+  939  lsmod | grep habanalabs
+  940  echo
+  941  echo "3. Checking Gaudi module"
+  942  ls -la modules/libuct_gaudi.so
+  943  file modules/libuct_gaudi.so
+  944  echo
+  945  echo "4. Checking module target"
+  946  ls -la src/uct/gaudi/.libs/libuct_gaudi.so*
+  947  echo
+  948  echo "5. Module validation result"
+  949  if [ -f "modules/libuct_gaudi.so" ] && lspci -d 1da3: | grep -q ""; then
+  950      echo "SUCCESS: Gaudi module has been successfully built and hardware is available"
+  951  else
+  952      echo "ERROR: Issues detected with Gaudi module or hardware"
+  953  fi
+  954  ' > test_gaudi_simple.sh && chmod +x test_gaudi_simple.sh && ./test_gaudi_simple.sh
+  955  chmod +x /workspace/ucx/gaudi_test_tool_v2.sh && cd /workspace/ucx && ./gaudi_test_tool_v2.sh
+  956  cd /workspace/ucx && cat GAUDI_MODULE_TEST_REPORT.md
+  957  cd /workspace/ucx && ./gaudi_test_tool_v2.sh | tee test_output.log
+  958  gcc -o gaudi_md_open_test gaudi_md_open_test.c -I/workspace/ucx/install/include -L/workspace/ucx/install/lib -luct -lucs -lucp
+  959  find /workspace/ucx -name "*.h" | grep -E "uct|gaudi"
+  960  find /workspace/ucx -name "libuct_gaudi*"
+  961  find / -name hlthunk.h 2>/dev/null
+  962  find /workspace/ucx -name "libuct.so" -o -name "libucp.so" -o -name "libucs.so"
+  963  ls -l /dev/hl* 2>/dev/null || echo "No Gaudi device nodes found"
+  964  lsmod | grep habanalabs
+  965  grep -rH uct_query_md_resources *
+  966  gcc -o gaudi_md_open_test gaudi_md_open_test.c -luct -lucs -I/usr/include/habanalabs -lhlthunk
+  967  find / -name "libhlthunk*" 2>/dev/null
+  968  gcc -o gaudi_md_open_test gaudi_md_open_test.c -I/workspace/ucx/src -L/workspace/ucx/src/uct/.libs -luct -L/workspace/ucx/src/ucs/.libs -lucs -I/usr/include/habanalabs
+  969  gcc -o gaudi_md_test_new gaudi_md_test_new.c -I/workspace/ucx/src -L/workspace/ucx/src/uct/.libs -L/workspace/ucx/src/ucs/.libs -luct -lucs -I/usr/include/habanalabs -Wl,-rpath,/workspace/ucx/src/uct/.libs -Wl,-rpath,/workspace/ucx/src/ucs/.libs
+  970  gcc -o gaudi_module_check gaudi_module_check.c -ldl
+  971  ./gaudi_module_check
+  972  gcc -o gaudi_direct_test gaudi_direct_test.c -I/workspace/ucx/src -L/workspace/ucx/src/ucs/.libs -lucs -ldl
+  973  ./gaudi_direct_test
+  974  gcc -o gaudi_direct_test gaudi_direct_test.c -I/workspace/ucx/src -L/workspace/ucx/src/ucs/.libs -lucs -ldl
+  975  LD_LIBRARY_PATH=/workspace/ucx/src/ucs/.libs:/workspace/ucx/src/uct/.libs ./gaudi_direct_test
+  976  find /usr -name "libhlthunk*"
+  977  find /usr -name "libhl-thunk*"
+  978  gcc -o gaudi_direct_test gaudi_direct_test.c -L/usr/lib/habanalabs -lhl-thunk -ldl
+  979  LD_LIBRARY_PATH=/workspace/ucx/src/ucs/.libs:/workspace/ucx/src/uct/.libs:/usr/lib/habanalabs ./gaudi_direct_test
+  980  gcc -o gaudi_direct_test gaudi_direct_test.c -L/usr/lib/habanalabs -ldl
+  981  LD_LIBRARY_PATH=/workspace/ucx/src/ucs/.libs:/workspace/ucx/src/uct/.libs:/usr/lib/habanalabs ./gaudi_direct_test
+  982  grep -r "define.*UCS_ERR_NO_DEVICE" /workspace/ucx/
+  983  hl-smi
+  984  ls -l /dev/hl* 2>/dev/null || echo "No Gaudi device nodes found"
+  985  lsmod | grep habanalabs
+  986  ./build.sh
+  987  cd src/uct
+  988  make
+  989  cd ..
+  990  gcc -o gaudi_direct_test gaudi_direct_test.c -L/usr/lib/habanalabs -ldlgcc -o gaudi_direct_test gaudi_direct_test.c -L/usr/lib/habanalabs -ldl
+  991  gcc -o gaudi_direct_test gaudi_direct_test.c -L/usr/lib/habanalabs -ldl
+  992  LD_LIBRARY_PATH=/workspace/ucx/src/ucs/.libs:/workspace/ucx/src/uct/.libs:/usr/lib/habanalabs ./gaudi_direct_test
+  993  vi test-gaudi.sh
+  994  bash test-gaudi.sh
+  995  ls
+  996  gcc -o gaudi_direct_test gaudi_direct_test.c -I/workspace/ucx/src -L/workspace/ucx/src/ucs/.libs -L/usr/lib/habanalabs -lucs -lhl-thunk -ldl
+  997  LD_LIBRARY_PATH=/workspace/ucx/src/ucs/.libs:/workspace/ucx/src/uct/.libs:/usr/lib/habanalabs ./gaudi_direct_test
+  998  chmod +x verify_gaudi_md.sh
+  999  ./verify_gaudi_md.sh
+ 1000  git status
+ 1001  git branch
+ 1002  git branch gaudi-v1.16.0
+ 1003  git branch gaudi-work
+ 1004  git branch
+ 1005  git checkout -b gaudi-test-integration
+ 1006  git checkout -b gaudi-v1.16.0-work
+ 1007  git branch
+ 1008  git add -u
+ 1009  git status
+ 1010  git add .
+ 1011  git status
+ 1012  git commit -m "working now."
+ 1013  git push
+ 1014  git status
+ 1015  cat verify_gaudi.sh
+ 1016  ls *.sh
+ 1017  vi test-gaudi.sh
+ 1018  gcc -o gaudi_direct_test gaudi_direct_test.c -I/workspace/ucx/src -L/workspace/ucx/src/ucs/.libs -L/usr/lib/habanalabs -lucs -lhl-thunk -ldl
+ 1019  LD_LIBRARY_PATH=/workspace/ucx/src/ucs/.libs:/workspace/ucx/src/uct/.libs:/usr/lib/habanalabs ./gaudi_direct_test
+ 1020  gcc -o gaudi_query_md_resources_test gaudi_query_md_resources_test.c -I/workspace/ucx/src -L/workspace/ucx/src/ucs/.libs -L/usr/lib/habanalabs -lucs -ldl
+ 1021  LD_LIBRARY_PATH=/workspace/ucx/src/ucs/.libs:/workspace/ucx/src/uct/.libs:/usr/lib/habanalabs ./gaudi_query_md_resources_test
+ 1022  cd src/uct/gaudi/
+ 1023  make
+ 1024  cd ..
+ 1025  LD_LIBRARY_PATH=/workspace/ucx/src/ucs/.libs:/workspace/ucx/src/uct/.libs:/usr/lib/habanalabs ./gaudi_query_md_resources_test
+ 1026  gcc -o gaudi_query_md_resources_test gaudi_query_md_resources_test.c -I/workspace/ucx/src -L/workspace/ucx/src/ucs/.libs -L/usr/lib/habanalabs -lucs -ldl
+ 1027  cd ..
+ 1028  gcc -o gaudi_query_md_resources_test gaudi_query_md_resources_test.c -I/workspace/ucx/src -L/workspace/ucx/src/ucs/.libs -L/usr/lib/habanalabs -lucs -ldl
+ 1029  LD_LIBRARY_PATH=/workspace/ucx/src/ucs/.libs:/workspace/ucx/src/uct/.libs:/usr/lib/habanalabs ./gaudi_query_md_resources_test
+ 1030  gcc -o gaudi_direct_test gaudi_direct_test.c -I/workspace/ucx/src -L/workspace/ucx/src/ucs/.libs -L/usr/lib/habanalabs -lucs -ldl
+ 1031  LD_LIBRARY_PATH=/workspace/ucx/src/ucs/.libs:/workspace/ucx/src/uct/.libs:/usr/lib/habanalabs ./gaudi_direct_test 
+ 1032  ./build.sh
+ 1033  cd ..
+ 1034  ./build.sh
+ 1035  git status
+ 1036  git diff
+ 1037  cd examples/
+ 1038  ls
+ 1039  ./gaudi_test 
+ 1040  cd /workspace/ucx/examples && gcc -v -Wall gaudi_test.o -o gaudi_test -L/usr/local/lib -L/usr/local/lib/ucx -L/usr/lib/habanalabs -Wl,-rpath=/usr/local/lib -Wl,-rpath=/usr/local/lib/ucx -Wl,-rpath=/usr/lib/habanalabs -luct -lucs -lucm -lucp -ldl -lpthread -lhl-thunk
+ 1041  CPPFLAGS="-I/usr/include/habanalabs -I/usr/include/drm -DHAVE_GAUDI=1" LDFLAGS="-L/usr/lib/habanalabs" cd /workspace/ucx && ./configure --with-gaudi --with-rdmacm --with-verbs --with-rc --with-ud --prefix=/usr/local && make -j$(nproc) && make install
+ 1042  ./build.sh
+ 1043  git branch
+ 1044  git apply gaudi_include_fix.patch
+ 1045  cd examples
+ 1046  make -f Makefile.gaudi
+ 1047  LD_LIBRARY_PATH=/usr/local/lib:/usr/lib/habanalabs:$LD_LIBRARY_PATH ./gaudi_test
+ 1048  UCX_TLS=all UCX_NET_DEVICES=all UCX_LOG_LEVEL=debug LD_LIBRARY_PATH=/usr/local/lib:/usr/lib/habanalabs:$LD_LIBRARY_PATH ./gaudi_test
+ 1049  cd ..
+ 1050  git branch
+ 1051  git status
+ 1052  git add -u
+ 1053  git commit -m "preserve."
+ 1054  git push
+ 1055  git checkout v1.16.0
+ 1056  git switch -c v1.16.0
+ 1057  git branch
+ 1058  git staus
+ 1059  git status
+ 1060  git clean -fix
+ 1061  git status
+ 1062  rm -rf src/uct/gaudi
+ 1063  rm -rf habanalabs/
+ 1064  git status
+ 1065  ls
+ 1066  ./configure
+ 1067  ls
+ 1068  ./autogen.sh 
+ 1069  ./configure
+ 1070  ./configure --with-gaudi
+ 1071  ./configure --with-gaudi=/user
+ 1072  ls
+ 1073  ./autogen.sh 
+ 1074  ./configure
+ 1075  autoreconf -i
+ 1076  ./configure --with-gaudi --prefix=/usr/local
+ 1077  make
+ 1078  git checkout new-gaudi -- build.sh
+ 1079  cat build.sh
+ 1080  ./build.sh
+ 1081  d uct
+ 1082  cd uct
+ 1083  ls
+ 1084  cd src/uct
+ 1085  ls
+ 1086  cd gaudi
+ 1087  make
+ 1088  ./build.sh
+ 1089  cd ..
+ 1090  ./build.sh
+ 1091  cd src/uct
+ 1092  cd gaudi
+ 1093  make
+ 1094  clear
+ 1095  make
+ 1096  clear
+ 1097  make
+ 1098  clear
+ 1099  make
+ 1100  gcc -o gaudi_query_md_resources_test gaudi_query_md_resources_test.c -I/workspace/ucx/src -L/workspace/ucx/src/ucs/.libs -L/usr/lib/habanalabs -lucs -ldl
+ 1101  LD_LIBRARY_PATH=/workspace/ucx/src/ucs/.libs:/workspace/ucx/src/uct/.libs:/usr/lib/habanalabs ./gaudi_query_md_resources_test
+ 1102  ldd /workspace/ucx/modules/libuct_gaudi.so
+ 1103  nm -D /usr/lib/habanalabs/libhl-thunk.so | grep hlthunk_open
+ 1104  nm -D /usr/lib/habanalabs/libhl-thunk.so | grep -i thunk
+ 1105  ls *.sh
+ 1106  cat build_gaudi_test.sh
+ 1107  cat build_gaudi_test.sh 
+ 1108  cat test-gaudi.sh 
+ 1109  bash test-gaudi.sh 
+ 1110  bash ./test-gaudi.sh
+ 1111  gcc -o gaudi_direct_test gaudi_direct_test.c -I/workspace/ucx/src -L/workspace/ucx/src/ucs/.libs -L/usr/lib/habanalabs -lucs -ldl
+ 1112  grep typedef gaudi_direct_test.c
+ 1113  gcc -o gaudi_direct_test gaudi_direct_test.c -I/workspace/ucx/src -L/workspace/ucx/src/ucs/.libs -L/usr/lib/habanalabs -lucs -ldl
+ 1114  head -20 gaudi_direct_test.c
+ 1115  gcc -o gaudi_direct_test gaudi_direct_test.c -I/workspace/ucx/src -L/workspace/ucx/src/ucs/.libs -L/usr/lib/habanalabs -lucs -ldl
+ 1116  grep uct_md_attr_v2_t gaudi_direct_test.c
+ 1117  grep typedef gaudi_direct_test.c
+ 1118  gcc -o gaudi_direct_test gaudi_direct_test.c -I/workspace/ucx/src -L/workspace/ucx/src/ucs/.libs -L/usr/lib/habanalabs -lucs -ldl
+ 1119  LD_LIBRARY_PATH=/workspace/ucx/src/ucs/.libs:/workspace/ucx/src/uct/.libs:/usr/lib/habanalabs ./gaudi_direct_test
+ 1120  ls
+ 1121  git status
+ 1122  git add *
+ 1123  ls
+ 1124  git status
+ 1125  ls *.sh
+ 1126  bash test-gaudi.sh 
+ 1127  gcc -o gaudi_direct_test gaudi_direct_test.c -I/workspace/ucx/src -L/workspace/ucx/src/ucs/.libs -L/usr/lib/habanalabs -lucs -ldl
+ 1128  LD_LIBRARY_PATH=/workspace/ucx/src/ucs/.libs:/workspace/ucx/src/uct/.libs:/usr/lib/habanalabs ./gaudi_direct_test
+ 1129  ls
+ 1130  ls *.sh
+ 1131  vi test-gaudi.sh
+ 1132  bash ./test-gaudi.sh
+ 1133  ls
+ 1134  git status
+ 1135  git add -u
+ 1136  git commit -m "all together"
+ 1137  git status
+ 1138  git push
+ 1139  gcc -o test_uct_md_open_gaudi test_uct_md_open_gaudi.c -I/workspace/ucx/src -L/workspace/ucx/src/uct/.libs -L/workspace/ucx/src/ucs/.libs -luct -lucs
+ 1140  ls test_ut_md_open_gaudi.c 
+ 1141  gcc -o test_uct_md_open_gaudi test_uct_md_open_gaudi.c -I/workspace/ucx/src -L/workspace/ucx/src/uct/.libs -L/workspace/ucx/src/ucs/.libs -luct -lucs
+ 1142  LD_LIBRARY_PATH=/workspace/ucx/src/uct/.libs:/workspace/ucx/src/ucs/.libs ./test_uct_md_open_gaudi
+ 1143  UCX_MODULE_PATH=/workspace/ucx/modules LD_LIBRARY_PATH=/workspace/ucx/src/uct/.libs:/workspace/ucx/src/ucs/.libs:/usr/lib/habanalabs ./test_uct_md_open_gaudi
+ 1144  UCX_LOG_LEVEL=debug UCX_MODULE_PATH=/workspace/ucx/modules LD_LIBRARY_PATH=/workspace/ucx/src/uct/.libs:/workspace/ucx/src/ucs/.libs:/usr/lib/habanalabs ./test_uct_md_open_gaudi
+ 1145  nm -D /workspace/ucx/modules/libuct_gaudi.so | grep UCT_COMPONENT_REGISTER
+ 1146  ls -lh /workspace/ucx/modules/libuct_gaudi.so && file /workspace/ucx/modules/libuct_gaudi.so
+ 1147  ls -lh /workspace/ucx/modules && file /workspace/ucx/modules/libuct_gaudi.so
+ 1148  ls -lh /workspace/ucx/src/uct/gaudi/.libs && file /workspace/ucx/src/uct/gaudi/.libs/libuct_gaudi.so*
+ 1149  find /workspace/ucx -name 'libuct_gaudi*' -ls
+ 1150  file /workspace/ucx/src/uct/gaudi/.libs/libuct_gaudi.so.0.0.0
+ 1151  nm -D /workspace/ucx/src/uct/gaudi/.libs/libuct_gaudi.so.0.0.0 | grep UCT_COMPONENT_REGISTER
+ 1152  make -C /workspace/ucx/src/uct/gaudi V=1
+ 1153  nm -D /workspace/ucx/src/uct/gaudi/.libs/libuct_gaudi.so.0.0.0 | grep gaudi
+ 1154  nm -D /workspace/ucx/src/uct/gaudi/.libs/libuct_gaudi.so.0.0.0 | grep -i register
+ 1155  make -C /workspace/ucx/src/uct/gaudi V=1
+ 1156  ls -l /workspace/ucx/modules/libuct_gaudi.so && file /workspace/ucx/modules/libuct_gaudi.so && nm -D /workspace/ucx/modules/libuct_gaudi.so | grep -i register
+ 1157  ls -l /workspace/ucx/modules/ && ls -l /workspace/ucx/src/uct/gaudi/.libs/ && file /workspace/ucx/src/uct/gaudi/.libs/libuct_gaudi.so.0.0.0 && nm -D /workspace/ucx/src/uct/gaudi/.libs/libuct_gaudi.so.0.0.0 | grep -i register
+ 1158  ls -l /workspace/ucx/modules/
+ 1159  file /workspace/ucx/src/uct/gaudi/.libs/libuct_gaudi.so.0.0.0 && nm -D /workspace/ucx/src/uct/gaudi/.libs/libuct_gaudi.so.0.0.0 | grep -i register
+ 1160  nm -D /workspace/ucx/src/uct/gaudi/.libs/libuct_gaudi.so.0.0.0 | grep -i uct_component_register && file /workspace/ucx/src/uct/gaudi/.libs/libuct_gaudi.so.0.0.0
+ 1161  export UCX_MODULE_PATH=/workspace/ucx/modules; export LD_LIBRARY_PATH=/workspace/ucx/src/uct/gaudi/.libs:$LD_LIBRARY_PATH; export UCX_LOG_LEVEL=debug; /workspace/ucx/test_uct_md_open_gaudi
+ 1162  ls -l /workspace/ucx/test_uct_md_open_gaudi && ldd /workspace/ucx/test_uct_md_open_gaudi
+ 1163  ls -l /workspace/ucx/gaudi_direct_test && ldd /workspace/ucx/gaudi_direct_test
+ 1164  ls -l /workspace/ucx/ && file /workspace/ucx/test_uct_md_open_gaudi && file /workspace/ucx/gaudi_direct_test
+ 1165  gcc -g -O0 -I/workspace/ucx/src -I/workspace/ucx -I/workspace/ucx/src -I/opt/rocm/include/hsa -I/opt/rocm/include -I/usr/include/habanalabs -I/usr/include/drm -L/workspace/ucx/src/uct/gaudi/.libs -luct_gaudi -ldl -o /workspace/ucx/gaudi_direct_test /workspace/ucx/gaudi_direct_test.c
+ 1166  ls -l /workspace/ucx/gaudi_direct_test && file /workspace/ucx/gaudi_direct_test && ldd /workspace/ucx/gaudi_direct_test
+ 1167  gcc -g -O0 -I/workspace/ucx/src -I/workspace/ucx -I/workspace/ucx/src -I/opt/rocm/include/hsa -I/opt/rocm/include -I/usr/include/habanalabs -I/usr/include/drm -L/workspace/ucx/src/uct/gaudi/.libs -luct_gaudi -ldl -o /workspace/ucx/test_uct_md_open_gaudi /workspace/ucx/test_uct_md_open_gaudi.c
+ 1168  ls -l /workspace/ucx/src/uct/.libs/ && nm -D /workspace/ucx/src/uct/.libs/libuct.so.0.0.0 | grep -E 'uct_md_open|uct_md_close|uct_md_config_read|uct_config_release|ucs_status_string'
+ 1169  ls -l /workspace/ucx/src/uct/.libs/libuct.so* && file /workspace/ucx/src/uct/.libs/libuct.so.0.0.0
+ 1170  ls -l /workspace/ucx/src/uct/.libs/
+ 1171  find /workspace/ucx/ -name 'libuct.so*'
+ 1172  nm -D /workspace/ucx/src/uct/.libs/libuct.so | grep -E 'uct_md_open|uct_md_close|uct_md_config_read|uct_config_release|ucs_status_string'
+ 1173  nm -gD /workspace/ucx/src/uct/.libs/libuct.so | grep uct_md_open
+ 1174  nm -g /workspace/ucx/src/uct/.libs/libuct.so | grep uct_md_open
+ 1175  nm /workspace/ucx/src/uct/.libs/libuct.so | grep uct_md_open
+ 1176  nm -g /workspace/ucx/src/uct/.libs/libuct.so.0.0.0 | grep uct_md_open
+ 1177  nm -a /workspace/ucx/src/uct/.libs/libuct.so.0.0.0 | grep uct_md_open
+ 1178  nm -a /workspace/ucx/src/uct/.libs/libuct.so.0.0.0 | grep uct_
+ 1179  readelf -s /workspace/ucx/src/uct/.libs/libuct.so.0.0.0 | grep uct_
+ 1180  readelf -s /workspace/ucx/src/uct/.libs/libuct.so.0.0.0 | grep UCS_
+ 1181  readelf -s /workspace/ucx/src/uct/.libs/libuct.so.0.0.0 | grep -i 'func\|object'
+ 1182  readelf -s /workspace/ucx/src/uct/.libs/libuct.so.0.0.0 | head -40
+ 1183  ls -lh /workspace/ucx/src/uct/.libs/libuct.so.0.0.0
+ 1184  file /workspace/ucx/src/uct/.libs/libuct.so.0.0.0
+ 1185  cd examples/
+ 1186  ls
+ 1187  make
+ 1188  cd cmake/
+ 1189  ls
+ 1190  make
+ 1191  cd ..
+ 1192  make -f Makefile
+ 1193  make clea
+ 1194  make clean
+ 1195  ls
+ 1196  make 
+ 1197  git status
+ 1198  git diff
+ 1199  ls
+ 1200  UCX_LOG_LEVEL=debug UCX_MODULE_PATH=/workspace/ucx/modules LD_LIBRARY_PATH=/workspace/ucx/src/uct/.libs:/workspace/ucx/src/ucs/.libs:/usr/lib/habanalabs ./test_uct_md_open_gaudi
+ 1201  gcc -o test_uct_md_open_gaudi test_uct_md_open_gaudi.c -I/workspace/ucx/src -L/workspace/ucx/src/uct/.libs -L/workspace/ucx/src/ucs/.libs -luct -lucs
+ 1202  UCX_LOG_LEVEL=debug UCX_MODULE_PATH=/workspace/ucx/modules LD_LIBRARY_PATH=/workspace/ucx/src/uct/.libs:/workspace/ucx/src/ucs/.libs:/usr/lib/habanalabs ./test_uct_md_open_gaudi
+ 1203  cd example
+ 1204  cd examples/
+ 1205  ls
+ 1206  make
+ 1207  make -C /workspace/ucx/examples V=1
+ 1208  ls -lh /workspace/ucx/examples/uct_hello_world /workspace/ucx/examples/ucp_hello_world /workspace/ucx/examples/ucp_client_server
+ 1209  ls -lh /workspace/ucx/examples/*.c
+ 1210  ls -lh /workspace/ucx/examples/
+ 1211  ls -lh /workspace/ucx/examples
+ 1212  ls -lh /workspace/ucx/examples/hello_world_util.h /workspace/ucx/examples/ucp_hello_world.c /workspace/ucx/examples/uct_hello_world.c /workspace/ucx/examples/ucp_client_server.c
+ 1213  ls -lh /workspace/ucx/examples && ls -lh /workspace/ucx/examples/Makefile*
+ 1214  cd /workspace/ucx && ./autogen.sh && ./configure && make -C examples V=1
+ 1215  ls -lh /workspace/ucx/examples/my_example
+ 1216  make -C /workspace/ucx/examples V=1
+ 1217  ls -lh /workspace/ucx/examples/
+ 1218  gcc -I./src -I./src/uct/api -I./src/ucs -I./src/ucs/api     -L./src/uct/.libs -L./src/ucs/.libs     -o uct_hello_world examples/uct_hello_world.c     -luct -lucs -lrt -lpthread
+ 1219  ls
+ 1220  cd example
+ 1221  cd examples
+ 1222  ls
+ 1223  cd ..
+ 1224  ls
+ 1225  ./uct_hello_world 
+ 1226  export LD_LIBRARY_PATH=/workspace/ucx/src/uct/.libs:/workspace/ucx/src/ucs/.libs:$LD_LIBRARY_PATH
+ 1227  ./uct_hello_world
+ 1228  LD_LIBRARY_PATH=/workspace/ucx/src/uct/.libs:/workspace/ucx/src/ucs/.libs:$LD_LIBRARY_PATH ./uct_hello_world
+ 1229  LD_LIBRARY_PATH=/workspace/ucx/src/uct/.libs:/workspace/ucx/src/ucs/.libs:$LD_LIBRARY_PATH ./uct_hello_world -d gaudi
+ 1230  export LD_LIBRARY_PATH=/workspace/ucx/src/uct/.libs:/workspace/ucx/src/ucs/.libs:/workspace/ucx/src/uct/gaudi/.libs:$LD_LIBRARY_PATH
+ 1231  export UCX_MODULE_PATH=/workspace/ucx/modules
+ 1232  export UCX_LOG_LEVEL=info
+ 1233  ./uct_hello_world -d gaudi0 -t gaudi
+ 1234  export LD_LIBRARY_PATH=/workspace/ucx/src/uct/.libs:/workspace/ucx/src/ucs/.libs:/workspace/ucx/src/uct/gaudi/.libs:$LD_LIBRARY_PATH
+ 1235  export UCX_MODULE_PATH=/workspace/ucx/modules
+ 1236  export UCX_LOG_LEVEL=info
+ 1237  ./uct_hello_world -d gaudi0 -t gaudi
+ 1238  gcc -shared -fPIC -o libuct_gaudi.so gaudi_md.c ... -lhlthunk
+ 1239  make -C src/uct/gaudi clean
+ 1240  make -C src/uct/gaudi V=1
+ 1241  ldd /workspace/ucx/src/uct/gaudi/.libs/libuct_gaudi.so | grep hlthunk
+ 1242  find /opt -name libhlthunk.so
+ 1243  find /opt -name *hlthunk*.so
+ 1244  find /usr -name *hlthunk*.so
+ 1245  find /usr -name *hl-thunk*.so
+ 1246  export LD_LIBRARY_PATH=/workspace/ucx/src/uct/.libs:/workspace/ucx/src/ucs/.libs:/workspace/ucx/src/uct/gaudi/.libs:$LD_LIBRARY_PATH
+ 1247  export UCX_MODULE_PATH=/workspace/ucx/modules
+ 1248  export UCX_LOG_LEVEL=info
+ 1249  ./uct_hello_world -d gaudi0 -t gaudi
+ 1250  cd src/uct/gaudi && make clean && cd ../../.. && ./autogen.sh && ./configure && make -j$(nproc)
+ 1251  ./build.sh
+ 1252  ls
+ 1253  ldd src/uct/gaudi/.libs/libuct_gaudi.so | grep hl-thunk
+ 1254  ldd src/uct/gaudi/.libs/libuct_gaudi.so
+ 1255  ./build.sh
+ 1256  ldd src/uct/gaudi/.libs/libuct_gaudi.so | grep hl-thunk
+ 1257  export UCX_MODULE_PATH=/workspace/ucx/modules
+ 1258  export UCX_LOG_LEVEL=info
+ 1259  ./uct_hello_world -d gaudi0 -t gaudi
+ 1260  ./uct_info -d
+ 1261  find . -name 'uct_info*'
+ 1262  ./test/apps/uct_info -d
+ 1263  find . -type f -executable -name 'uct_info*'
+ 1264  make uct_info
+ 1265  find . -name Makefile | xargs grep uct_info
+ 1266  make -C test/apps/uct_info uct_info
+ 1267  ./test/apps/uct_info/uct_info -d
+ 1268  ldd src/uct/gaudi/.libs/libuct_gaudi.so | grep hl-thunk
+ 1269  export UCX_LOG_LEVEL=debug
+ 1270  ./uct_hello_world -d gaudi0 -t gaudi
+ 1271  ls -l /workspace/ucx/modules/libuct_gaudi.so
+ 1272  file /workspace/ucx/modules/libuct_gaudi.so
+ 1273  ldd /workspace/ucx/src/uct/gaudi/.libs/libuct_gaudi.so | grep hl-thunk
+ 1274  nm -D /workspace/ucx/src/uct/gaudi/.libs/libuct_gaudi.so | grep uct_gaudi_component
+ 1275  ./uct_info -d
+ 1276  git status
+ 1277  git add -u
+ 1278  git status
+ 1279  git commit -m "update."
+ 1280  git status
+ 1281  git add -u
+ 1282  ls /usr/lib/habanalabs/
+ 1283  find /workspace/ucx -name "libuct.so*"
+ 1284  export LD_LIBRARY_PATH=/workspace/ucx/src/uct/.libs:$LD_LIBRARY_PATH
+ 1285  ./uct_hello_world
+ 1286  find /workspace/ucx -name "libucs.so*"
+ 1287  export LD_LIBRARY_PATH=/workspace/ucx/src/uct/.libs:/workspace/ucx/src/ucs/.libs:$LD_LIBRARY_PATH
+ 1288  ./uct_hello_world
+ 1289  find /workspace/ucx -type d -name lib
+ 1290  find /workspace/ucx -type d -name hip
+ 1291  find /workspace/ucx -type d -name lib64
+ 1292  export GAUDI_ROOT=/path/to/gaudi
+ 1293  export LD_LIBRARY_PATH=/workspace/ucx/src/uct/.libs:/workspace/ucx/src/ucs/.libs:$GAUDI_ROOT/lib:$GAUDI_ROOT/hip/lib:$GAUDI_ROOT/lib64:$LD_LIBRARY_PATH
+ 1294  ./uct_hello_world
+ 1295  ./uct_hello_world -d gaudi0 -t gaudi
+ 1296  UCX_LOG_LEVEL=debug ./uct_hello_world -d gaudi0 -t gaudi
+ 1297  ./uct_info -d
+ 1298  ./uct_info -a | grep -i gaudi
+ 1299  make -C src/tools info
+ 1300  make
+ 1301  find . -name uct_info
+ 1302  ./test/apps/uct_info/uct_info -d
+ 1303  ./test/apps/uct_info/uct_info -a | grep -i gaudi
+ 1304  ldd /workspace/ucx/src/uct/.libs/libuct_gaudi.so
+ 1305  make -C src/uct/gaudi V=1
+ 1306  make -C src/uct/gaudi clean
+ 1307  make -C src/uct/gaudi V=1
+ 1308  make -C src/uct/gaudi clean && make -C src/uct/gaudi V=1
+ 1309  ls -l /workspace/ucx/src/uct/.libs/libuct_gaudi.so*
+ 1310  find /workspace/ucx -name "libuct_gaudi.so*"
+ 1311  export LD_LIBRARY_PATH=/workspace/ucx/src/uct/gaudi/.libs:/workspace/ucx/src/uct/.libs:/workspace/ucx/src/ucs/.libs:$LD_LIBRARY_PATH
+ 1312  export LD_LIBRARY_PATH=/workspace/ucx/src/uct/gaudi/.libs:/workspace/ucx/src/uct/.libs:/workspace/ucx/src/ucs/.libs:$LD_LIBRARY_PATH && ./test/apps/uct_info/uct_info -a | grep -i gaudi
+ 1313  export UCX_MODULE_PATH=/workspace/ucx/src/uct/gaudi/.libs
+ 1314  UCX_LOG_LEVEL=debug ./test/apps/uct_info/uct_info -a 2>&1 | tee uct_info_debug.log
+ 1315  export UCX_MODULE_PATH=/workspace/ucx/src/uct/gaudi/.libs && export LD_LIBRARY_PATH=/workspace/ucx/src/uct/gaudi/.libs:/workspace/ucx/src/uct/.libs:/workspace/ucx/src/ucs/.libs:$LD_LIBRARY_PATH && UCX_LOG_LEVEL=debug ./test/apps/uct_info/uct_info -a 2>&1 | tee uct_info_debug.log
+ 1316  ./configure --enable-modules
+ 1317  ./build.sh
+ 1318  export UCX_MODULE_PATH=/workspace/ucx/src/uct/gaudi/.libs && export LD_LIBRARY_PATH=/workspace/ucx/src/uct/gaudi/.libs:/workspace/ucx/src/uct/.libs:/workspace/ucx/src/ucs/.libs:$LD_LIBRARY_PATH && UCX_LOG_LEVEL=debug ./test/apps/uct_info/uct_info -a 2>&1 | tee uct_info_debug.log
+ 1319  export UCX_TLS=gaudi
+ 1320  uct_info -a -d gaudi
+ 1321  cd ./test/app/uct_info/
+ 1322  ./test/apps/uct_info/uct_info -a -d gaudi
+ 1323  export UCX_TLS=gaudi
+ 1324  export UCX_LOG_LEVEL=debug
+ 1325  ./test/apps/uct_info/uct_info -a -d gaudi
+ 1326  cd src/uct
+ 1327  make
+ 1328  cd ..
+ 1329  ./test/apps/uct_info/uct_info -a -d gaudi
+ 1330  cd src/uct/gaudi
+ 1331  make
+ 1332  cd ../../../; ./test/apps/uct_info/uct_info -a -d gaudi
+ 1333  git status
+ 1334  git add -u
+ 1335  ./test/apps/uct_info/uct_info -a -d gaudi
+ 1336  history 2>&1 |tee hist.log
