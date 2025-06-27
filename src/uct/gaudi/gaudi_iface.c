@@ -11,7 +11,6 @@ ucs_status_t uct_gaudi_iface_query(uct_iface_h tl_iface, uct_iface_attr_t *iface
     iface_attr->cap.put.max_short = 256;
     iface_attr->cap.get.max_short = 256;
     iface_attr->cap.am.max_short = 256;
-    iface_attr->latency.overhead = 1e-6;
     iface_attr->latency.c = 1e-6;
     iface_attr->latency.m = 0;
     iface_attr->bandwidth.shared = 10000 * UCS_MBYTE;
