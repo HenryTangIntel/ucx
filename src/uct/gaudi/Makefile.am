@@ -19,7 +19,7 @@ libuct_gaudi_la_LDFLAGS  = $(GAUDI_LDFLAGS) $(GAUDI_LIBS) -version-info $(SOVERS
 
 noinst_HEADERS = gaudi_md.h gaudi_iface.h 
 
-libuct_gaudi_la_SOURCES = gaudi_md.c 
+libuct_gaudi_la_SOURCES = gaudi_md.c gaudi_iface.c
 
 PKG_CONFIG_NAME=gaudi
 

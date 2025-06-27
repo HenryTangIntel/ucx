@@ -6,6 +6,7 @@
 #include <ucs/type/status.h>
 #include <ucs/datastruct/list.h>
 #include <ucs/sys/compiler_def.h>
+#include <uct/base/uct_iface.h>
 
 typedef struct uct_gaudi_iface {
     uct_iface_t           super;

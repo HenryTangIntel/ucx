@@ -1,12 +1,21 @@
-
 #include "gaudi_iface.h"
 #include <string.h>
+#include <ucs/sys/math.h>
 
 ucs_status_t uct_gaudi_iface_query(uct_iface_h tl_iface, uct_iface_attr_t *iface_attr)
 {
-    memset(iface_attr, 0, sizeof(*iface_attr));
-    iface_attr->iface_addr_len = sizeof(uint64_t); // Example address length
-    iface_attr->cap.flags = 0; // Set appropriate capability flags
+    iface_attr->cap.flags = UCT_IFACE_FLAG_AM_SHORT |
+                      UCT_IFACE_FLAG_PUT_SHORT |
+                      UCT_IFACE_FLAG_GET_SHORT;
+
+    iface_attr->cap.put.max_short = 256;
+    iface_attr->cap.get.max_short = 256;
+    iface_attr->cap.am.max_short = 256;
+    iface_attr->latency.overhead = 1e-6;
+    iface_attr->latency.c = 1e-6;
+    iface_attr->latency.m = 0;
+    iface_attr->bandwidth.shared = 10000 * UCS_MBYTE;
+
     return UCS_OK;
 }
 

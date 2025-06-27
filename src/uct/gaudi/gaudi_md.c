@@ -65,6 +65,7 @@ static ucs_status_t uct_gaudi_md_mem_reg(uct_md_h md, void *address, size_t leng
 {
     // Integrate Gaudi-specific memory registration
     // Typically use hl-thunk or DMA-buf related API
+    *memh_p = NULL;
     return UCS_OK;
 }
 
