@@ -17,7 +17,7 @@ libuct_gaudi_la_LDFLAGS  = $(GAUDI_LDFLAGS) $(GAUDI_LIBS) -version-info $(SOVERS
                           -L/usr/lib/habanalabs -lhl-thunk
 
 
-noinst_HEADERS = gaudi_md.h 
+noinst_HEADERS = gaudi_md.h gaudi_iface.h 
 
 libuct_gaudi_la_SOURCES = gaudi_md.c 
 

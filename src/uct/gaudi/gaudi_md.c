@@ -59,16 +59,44 @@ ucs_status_t uct_gaudi_md_query(uct_md_h md, uct_md_attr_v2_t *md_attr)
 }
 
 
+static ucs_status_t uct_gaudi_md_mem_reg(uct_md_h md, void *address, size_t length,
+                                         const uct_md_mem_reg_params_t *params,
+                                         uct_mem_h *memh_p)
+{
+    // Integrate Gaudi-specific memory registration
+    // Typically use hl-thunk or DMA-buf related API
+    return UCS_OK;
+}
+
+static ucs_status_t uct_gaudi_md_mem_dereg(uct_md_h md, const uct_md_mem_dereg_params_t *params)
+{
+    // Deregister memory
+    return UCS_OK;
+}
+
+static ucs_status_t uct_gaudi_md_mem_alloc(uct_md_h md, size_t *length_p,
+                                           void **address_p, ucs_memory_type_t mem_type,
+                                           unsigned flags, const char *alloc_name, uct_mem_h *memh_p)
+{
+    // Allocate memory via Gaudi's API
+    return UCS_OK;
+}
+
+static ucs_status_t uct_gaudi_md_mem_free(uct_md_h md, uct_mem_h memh)
+{
+    // Free memory via Gaudi's API
+    return UCS_OK;
+}
 
 
 
 static uct_md_ops_t uct_gaudi_md_ops = {
     .close        = uct_gaudi_md_close,
     .query        = uct_gaudi_md_query,
-    .mem_alloc    = NULL, //uct_gaudi_md_mem_alloc,
-    .mem_free     = NULL, //uct_gaudi_md_mem_free,
-    .mem_reg      = NULL, //uct_gaudi_md_mem_reg,
-    .mem_dereg    = NULL, //uct_gaudi_md_mem_dereg,
+    .mem_alloc    = uct_gaudi_md_mem_alloc,
+    .mem_free     = uct_gaudi_md_mem_free,
+    .mem_reg      = uct_gaudi_md_mem_reg,
+    .mem_dereg    = uct_gaudi_md_mem_dereg,
 };
 
 
