@@ -27,6 +27,10 @@ typedef struct uct_gaudi_copy_md {
         int                     dmabuf_supported;
         uct_gaudi_pref_loc_t     pref_loc;
     } config;
+    void * vaddr;
+    void * dev_ptr;
+    size_t reg_size;
+
 } uct_gaudi_copy_md_t;
 
 /**

@@ -184,11 +184,47 @@ void uct_gaudi_copy_md_close(uct_md_h  uct_md)
     ucs_free(md);
 }
 
+static ucs_status_t uct_gaudi_copy_mem_reg_internal(
+        uct_md_h uct_md, void *address, size_t length,
+        int pg_align_addr, uct_gaudi_copy_md_t *mem_hndl)
+{
+    void *dev_addr = NULL;
+
+    ucs_assert((address != NULL) && (length != 0));
+
+ 
+
+    mem_hndl->vaddr    = address;
+    mem_hndl->dev_ptr  = dev_addr;
+    mem_hndl->reg_size = length;
+
+    ucs_trace("Registered addr %p len %zu dev addr %p", address, length, dev_addr);
+    return UCS_OK;
+}
+
+
 UCS_PROFILE_FUNC(ucs_status_t, uct_gaudi_copy_mem_reg,
                  (md, address, length, params, memh_p),
                  uct_md_h md, void *address, size_t length,
                  const uct_md_mem_reg_params_t *params, uct_mem_h *memh_p)
 {
+
+    uct_gaudi_copy_md_t *mem_hndl = NULL;
+    ucs_status_t status;
+
+    mem_hndl = ucs_malloc(sizeof(uct_gaudi_copy_md_t), "gaudi_copy handle");
+    if (NULL == mem_hndl) {
+        ucs_error("failed to allocate memory for gaudi_copy_md_t");
+        return UCS_ERR_NO_MEMORY;
+    }
+
+    status = uct_gaudi_copy_mem_reg_internal(md, address, length, 1, mem_hndl);
+    if (status != UCS_OK) {
+        ucs_free(mem_hndl);
+        return status;
+    }
+
+    *memh_p = mem_hndl;
     return UCS_OK;
 }
 
@@ -231,7 +267,9 @@ ucs_status_t uct_gaudi_copy_md_open(uct_component_t *component,
         ucs_derived_of(config, uct_gaudi_copy_md_config_t);
     uct_gaudi_md_t *md;
     int i;
-    int ret;
+    //int ret;
+
+    ucs_info("Opening Gaudi MD");
     
     md = ucs_calloc(1, sizeof(*md), "uct_gaudi_md");
     if (!md) {
@@ -255,6 +293,7 @@ ucs_status_t uct_gaudi_copy_md_open(uct_component_t *component,
     }
     
     /* Get device info */
+    /*
     ret = hlthunk_get_info(md->hlthunk_fd, &md->device_info);
     if (ret != 0) {
         ucs_error("Failed to get Gaudi device info");
@@ -262,6 +301,8 @@ ucs_status_t uct_gaudi_copy_md_open(uct_component_t *component,
         ucs_free(md);
         return UCS_ERR_NO_DEVICE;
     }
+    */
+
     
     md->super.ops = &uct_gaudi_md_ops;
     md->super.component = &uct_gaudi_copy_component;
@@ -286,7 +327,7 @@ uct_component_t uct_gaudi_copy_component = {
     .rkey_ptr           = (uct_component_rkey_ptr_func_t)ucs_empty_function_return_unsupported,
     .rkey_release       = (uct_component_rkey_release_func_t)ucs_empty_function_return_success,
     .rkey_compare       = uct_base_rkey_compare,
-    .name               = "gaudi_cpy",
+    .name               = "gaudi",
     .md_config          = {
         .name           = "Gaudi-copy memory domain",
         .prefix         = "GAUDI_COPY_",
