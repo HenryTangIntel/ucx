@@ -10,7 +10,11 @@ AC_ARG_WITH([gaudi],
 
 gaudi_happy=no
 
-AS_IF([test "x$with_gaudi" != "xno"], [
+AS_IF([test "x$with_gaudi" = "xno"],
+    [ gaudi_happy = no
+      have_gaudi_static = no
+    ], 
+    [
     CPPFLAGS="$CPPFLAGS -I$with_gaudi/include/habanalabs"
     LDFLAGS="$LDFLAGS -L$with_gaudi/lib/habanalabs"
     AC_CHECK_HEADER([hlthunk.h], [],

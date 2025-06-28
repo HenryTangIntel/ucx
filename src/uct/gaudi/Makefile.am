@@ -5,8 +5,10 @@
 
 if HAVE_GAUDI
 
+SUBDIRS = . 
+
 module_LTLIBRARIES      = libuct_gaudi.la
-libuct_gaudi_la_CPPFLAGS = $(BASE_CPPFLAGS) $(ROCM_CPPFLAGS)
+libuct_gaudi_la_CPPFLAGS = $(BASE_CPPFLAGS) $(GAUDI_CPPFLAGS)
 libuct_gaudi_la_CFLAGS   = $(BASE_CFLAGS)
 libuct_gaudi_la_LIBADD   = $(top_builddir)/src/ucs/libucs.la \
                           $(top_builddir)/src/uct/libuct.la
@@ -17,9 +19,19 @@ libuct_gaudi_la_LDFLAGS  = $(GAUDI_LDFLAGS) $(GAUDI_LIBS) -version-info $(SOVERS
                           -L/usr/lib/habanalabs -lhl-thunk
 
 
-noinst_HEADERS = gaudi_md.h gaudi_iface.h 
+noinst_HEADERS = \
+    base/gaudi_md.h \
+    base/gaudi_iface.h \
+    copy/gaudi_copy_iface.h \
+    copy/gaudi_copy_md.h \
+    copy/gaudi_copy_ep.h 
 
-libuct_gaudi_la_SOURCES = gaudi_md.c gaudi_iface.c
+libuct_gaudi_la_SOURCES = \
+    base/gaudi_md.c \
+    base/gaudi_iface.c \
+    copy/gaudi_copy_iface.c \
+    copy/gaudi_copy_md.c \
+    copy/gaudi_copy_ep.c
 
 PKG_CONFIG_NAME=gaudi
 
