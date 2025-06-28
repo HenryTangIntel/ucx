@@ -36,30 +36,30 @@ UCS_CLASS_DEFINE_DELETE_FUNC(uct_gaudi_copy_ep_t, uct_ep_t);
     ucs_trace_data("%s [ptr %p len %zu] to 0x%" PRIx64, _name, (_iov)->buffer, \
                    (_iov)->length, (_remote_addr))
 
-ucs_status_t uct_gaudi_copy_init_stream(hl_thunk_device_handle_t *stream) // replace by Synapse runtime API
+ucs_status_t uct_gaudi_copy_init_stream(int fd) // replace by Synapse runtime API
 {
-    if (*stream != 0) {
+    if (fd != 0) {
         return UCS_OK;
     }
 
     return UCS_OK;
 }
 
-static UCS_F_ALWAYS_INLINE hl_thunk_device_handle_t *
+static UCS_F_ALWAYS_INLINE int *
 uct_gaudi_copy_get_stream(uct_gaudi_copy_iface_t *iface,
                          ucs_memory_type_t src_type,
                          ucs_memory_type_t dst_type)
 {
-   hl_thunk_device_handle_t *stream = NULL;
+    int *stream = NULL;
 
     ucs_status_t status;
 
     ucs_assert((src_type < UCS_MEMORY_TYPE_LAST) &&
                (dst_type < UCS_MEMORY_TYPE_LAST));
 
-    stream = &iface->queue_desc[src_type][dst_type].stream;
+    //stream = &iface->queue_desc[src_type][dst_type].stream;
 
-    status = uct_gaudi_copy_init_stream(stream);
+    status = uct_gaudi_copy_init_stream(*stream);
     if (status != UCS_OK) {
         return NULL;
     }
@@ -80,7 +80,7 @@ uct_cuda_copy_get_mem_type(uct_md_h md, void *address, size_t length)
 
     if ((status == UCS_ERR_UNSUPPORTED) ||
         (mem_info.type == UCS_MEMORY_TYPE_UNKNOWN)) {
-        status = uct_cuda_copy_md_detect_memory_type(md, address, length,
+        status = uct_gaudi_copy_md_detect_memory_type(md, address, length,
                                                      &mem_info.type);
         if (status != UCS_OK) {
             return UCS_MEMORY_TYPE_HOST;
@@ -94,21 +94,22 @@ static UCS_F_ALWAYS_INLINE ucs_status_t
 uct_gaudi_copy_post_gaudi_async_copy(uct_ep_h tl_ep, void *dst, void *src,
                                    size_t length, uct_completion_t *comp)
 {
+    /*
     uct_gaudi_copy_iface_t *iface = ucs_derived_of(tl_ep->iface, uct_gaudi_copy_iface_t);
     uct_base_iface_t *base_iface = ucs_derived_of(tl_ep->iface, uct_base_iface_t);
     uct_gaudi_copy_event_desc_t *gaudi_event;
-    uct_gaudi_copy_queue_desc_t *q_desc;
+  
     ucs_status_t status;
     ucs_memory_type_t src_type;
     ucs_memory_type_t dst_type;
-    hl_thunk_device_handle_t *stream;
+    int *stream;
     ucs_queue_head_t *event_q;
 
     if (!length) {
         return UCS_OK;
     }
 
-    /* ensure context is set before creating events/streams */
+  
     if (iface->gaudi_context == NULL) {
         UCT_CUDADRV_FUNC_LOG_ERR(cuCtxGetCurrent(&iface->gaudi_context));
         if (iface->gaudi_context == NULL) {
@@ -116,6 +117,7 @@ uct_gaudi_copy_post_gaudi_async_copy(uct_ep_h tl_ep, void *dst, void *src,
             return UCS_ERR_IO_ERROR;
         }
     }
+    
 
     src_type = uct_gaudi_copy_get_mem_type(base_iface->md, src, length);
     dst_type = uct_gaudi_copy_get_mem_type(base_iface->md, dst, length);
@@ -135,13 +137,13 @@ uct_gaudi_copy_post_gaudi_async_copy(uct_ep_h tl_ep, void *dst, void *src,
         return UCS_ERR_NO_MEMORY;
     }
 
-    /*
+    
 
     status = UCT_GAUDI_CALL_LOG_ERR(gaudiMemcpyAsync, dst, src, length,
                                    gaudiMemcpyDefault, *stream);
 
     status = UCT_GAUDI_CALL_LOG_ERR(gaudiEventRecord, gaudi_event->event, *stream);
-    */
+    
     if (UCS_OK != status) {
         return UCS_ERR_IO_ERROR;
     }
@@ -156,6 +158,7 @@ uct_gaudi_copy_post_gaudi_async_copy(uct_ep_h tl_ep, void *dst, void *src,
     ucs_trace("gaudi async issued: %p dst:%p[%s], src:%p[%s] len:%ld",
               gaudi_event, dst, ucs_memory_type_names[dst_type], src,
               ucs_memory_type_names[src_type], length);
+    */
     return UCS_INPROGRESS;
 }
 
@@ -177,7 +180,7 @@ UCS_PROFILE_FUNC(ucs_status_t, uct_gaudi_copy_ep_get_zcopy,
 
     UCT_TL_EP_STAT_OP(ucs_derived_of(tl_ep, uct_base_ep_t), GET, ZCOPY,
                       uct_iov_total_length(iov, iovcnt));
-    uct_cuda_copy_trace_data("GET_ZCOPY", remote_addr, iov, iovcnt);
+    //uct_gaudi_copy_trace_data("GET_ZCOPY", remote_addr, iov, iovcnt);
     return status;
 }
 
@@ -206,24 +209,7 @@ UCS_PROFILE_FUNC(ucs_status_t, uct_gaudi_copy_ep_put_short,
                  uct_ep_h tl_ep, const void *buffer, unsigned length,
                  uint64_t remote_addr, uct_rkey_t rkey)
 {
-    uct_gaudi_copy_iface_t *iface = ucs_derived_of(tl_ep->iface, uct_gaudi_copy_iface_t);
-    cudaStream_t *stream         = &iface->short_stream;
-    ucs_status_t status;
-
-    status = uct_gaudi_copy_init_stream(stream);
-    if (status != UCS_OK) {
-        return status;
-    }
-
-    /*
-    UCT_GAUDI_CALL_LOG_ERR(gaudiMemcpyAsync, (void*)remote_addr, buffer, length,
-                          gaudiMemcpyDefault, *stream);
-    status = UCT_GAUDI_CALL_LOG_ERR(gaudiStreamSynchronize, *stream);
-    */
-
-    UCT_TL_EP_STAT_OP(ucs_derived_of(tl_ep, uct_base_ep_t), PUT, SHORT, length);
-    ucs_trace_data("PUT_SHORT size %d from %p to %p",
-                   length, buffer, (void *)remote_addr);
+    ucs_status_t status = UCS_OK;
     return status;
 }
 
@@ -232,23 +218,6 @@ UCS_PROFILE_FUNC(ucs_status_t, uct_gaudi_copy_ep_get_short,
                  uct_ep_h tl_ep, void *buffer, unsigned length,
                  uint64_t remote_addr, uct_rkey_t rkey)
 {
-    uct_gaudi_copy_iface_t *iface = ucs_derived_of(tl_ep->iface, uct_gaudi_copy_iface_t);
-    cudaStream_t *stream         = &iface->short_stream;
-    ucs_status_t status;
-
-    status = uct_gaudi_copy_init_stream(stream);
-    if (status != UCS_OK) {
-        return status;
-    }
-
-    /*
-    UCT_GAUDI_CALL_LOG_ERR(gaudiMemcpyAsync, buffer, (void*)remote_addr, length,
-                          gaudiMemcpyDefault, *stream);
-    status = UCT_GAUDI_CALL_LOG_ERR(gaudiStreamSynchronize, *stream);
-    */
-
-    UCT_TL_EP_STAT_OP(ucs_derived_of(tl_ep, uct_base_ep_t), GET, SHORT, length);
-    ucs_trace_data("GET_SHORT size %d from %p to %p",
-                   length, (void *)remote_addr, buffer);
+    ucs_status_t status = UCS_OK;
     return status;
 }

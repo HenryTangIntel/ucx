@@ -68,15 +68,6 @@ static ucs_config_field_t uct_gaudi_copy_md_config_table[] = {
 
 
 
-static int uct_gaudi_copy_md_is_dmabuf_supported()
-{
-    int dmabuf_supported = 1;
-
-   
-    return dmabuf_supported;
-}
-
-
 
 ucs_status_t uct_gaudi_copy_md_query(uct_md_h md, uct_md_attr_v2_t *md_attr)
 {
@@ -115,21 +106,7 @@ uct_gaudi_copy_mkey_pack(uct_md_h md, uct_mem_h memh, void *address,
     return UCS_OK;
 }
 
-static ucs_status_t uct_gaudi_copy_rkey_unpack(uct_component_t *component,
-                                              const void *rkey_buffer,
-                                              uct_rkey_t *rkey_p,
-                                              void **handle_p)
-{
-    *rkey_p   = 0xdeadbeef;
-    *handle_p = NULL;
-    return UCS_OK;
-}
 
-static ucs_status_t uct_gaudi_copy_rkey_release(uct_component_t *component,
-                                               uct_rkey_t rkey, void *handle)
-{
-    return UCS_OK;
-}
 
 
 
