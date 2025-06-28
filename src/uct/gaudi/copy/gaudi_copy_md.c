@@ -15,6 +15,15 @@
 #define UCT_GAUDI_DEV_NAME_MAX_LEN 64
 #define UCT_GAUDI_MAX_DEVICES      32
 
+uct_component_t uct_gaudi_copy_component;
+
+enum hlthunk_device_name devices[] = {
+        HLTHUNK_DEVICE_GAUDI3,
+        HLTHUNK_DEVICE_GAUDI2,
+        HLTHUNK_DEVICE_GAUDI,
+        HLTHUNK_DEVICE_DONT_CARE
+};
+
 static const char *uct_gaudi_pref_loc[] = {
     [UCT_GAUDI_PREF_LOC_CPU]  = "cpu",
     [UCT_GAUDI_PREF_LOC_HPU]  = "hpu",
@@ -69,7 +78,7 @@ static int uct_gaudi_copy_md_is_dmabuf_supported()
 
 
 
-ucs_status_t uct_gaudi_md_query(uct_md_h md, uct_md_attr_v2_t *md_attr)
+ucs_status_t uct_gaudi_copy_md_query(uct_md_h md, uct_md_attr_v2_t *md_attr)
 {
     uct_gaudi_md_t *gaudi_md = ucs_derived_of(md, uct_gaudi_md_t);
     
@@ -174,7 +183,7 @@ static ucs_status_t uct_gaudi_copy_mem_alloc(uct_md_h md, size_t *length_p,
 
 
 
-static ucs_status_t uct_gaudi_mem_free(uct_md_h md, uct_mem_h memh)
+static ucs_status_t uct_gaudi_copy_mem_free(uct_md_h md, uct_mem_h memh)
 {
     uct_gaudi_md_t *gaudi_md = ucs_derived_of(md, uct_gaudi_md_t);
     uct_gaudi_mem_t *gaudi_memh = memh;
@@ -187,7 +196,7 @@ static ucs_status_t uct_gaudi_mem_free(uct_md_h md, uct_mem_h memh)
     return UCS_OK;
 }
 
-void uct_gaudi_md_close(uct_md_h  uct_md)
+void uct_gaudi_copy_md_close(uct_md_h  uct_md)
 {
     uct_gaudi_md_t *md = ucs_derived_of(uct_md, uct_gaudi_md_t);
     
@@ -198,6 +207,30 @@ void uct_gaudi_md_close(uct_md_h  uct_md)
     ucs_free(md);
 }
 
+UCS_PROFILE_FUNC(ucs_status_t, uct_gaudi_copy_mem_reg,
+                 (md, address, length, params, memh_p),
+                 uct_md_h md, void *address, size_t length,
+                 const uct_md_mem_reg_params_t *params, uct_mem_h *memh_p)
+{
+    return UCS_OK;
+}
+
+UCS_PROFILE_FUNC(ucs_status_t, uct_gaudi_copy_mem_dereg,
+                 (md, params),
+                 uct_md_h md, const uct_md_mem_dereg_params_t *params)
+{
+    return UCS_OK;
+}
+
+UCS_PROFILE_FUNC(ucs_status_t, uct_gaudi_copy_md_detect_memory_type,
+                 (md, address, length, mem_type_p), uct_md_h md,
+                 const void *address, size_t length,
+                 ucs_memory_type_t *mem_type_p)
+{
+    return UCS_OK;
+}
+
+
 static uct_md_ops_t uct_gaudi_md_ops = {
     .close              = uct_gaudi_copy_md_close,
     .query              = uct_gaudi_copy_md_query,
@@ -207,9 +240,85 @@ static uct_md_ops_t uct_gaudi_md_ops = {
     .mem_reg            = uct_gaudi_copy_mem_reg,
     .mem_dereg          = uct_gaudi_copy_mem_dereg,
     .mem_attach         = ucs_empty_function_return_unsupported,
-    .detect_memory_type = uct_gaudi_md_detect_memory_type
+    .detect_memory_type = uct_gaudi_copy_md_detect_memory_type
 };
 
 
 
+ucs_status_t uct_gaudi_copy_md_open(uct_component_t *component,
+                              const char *md_name,
+                              const uct_md_config_t *config,
+                              uct_md_h *md_p)
+{
+    const uct_gaudi_copy_md_config_t *md_config =
+        ucs_derived_of(config, uct_gaudi_copy_md_config_t);
+    uct_gaudi_md_t *md;
+    int i;
+    int ret;
+    
+    md = ucs_calloc(1, sizeof(*md), "uct_gaudi_md");
+    if (!md) {
+        return UCS_ERR_NO_MEMORY;
+    }
+    
+    /* Try to open Gaudi device */
+    md->hlthunk_fd = -1;
+    for (i = 0; i < 4; i++) {
+        md->hlthunk_fd = hlthunk_open(devices[i], NULL);
+        if (md->hlthunk_fd >= 0) {
+            md->device_type = devices[i];
+            break;
+        }
+    }
+    
+    if (md->hlthunk_fd < 0) {
+        ucs_error("Failed to open Gaudi device");
+        ucs_free(md);
+        return UCS_ERR_NO_DEVICE;
+    }
+    
+    /* Get device info */
+    ret = hlthunk_get_info(md->hlthunk_fd, &md->device_info);
+    if (ret != 0) {
+        ucs_error("Failed to get Gaudi device info");
+        hlthunk_close(md->hlthunk_fd);
+        ucs_free(md);
+        return UCS_ERR_NO_DEVICE;
+    }
+    
+    md->super.ops = &uct_gaudi_md_ops;
+    md->super.component = &uct_gaudi_copy_component;
+    
+    /* Copy configuration */
+    //md->config.uc_reg_cost = md_config->uc_reg_cost;
+    md->config.dmabuf_supported = (md_config->enable_dmabuf != UCS_NO);
+    
+    *md_p = &md->super;
+    
+    ucs_debug("Opened Gaudi MD device_type=%d", md->device_type);
+    
+    return UCS_OK;
+}
 
+
+uct_component_t uct_gaudi_copy_component = {
+    .query_md_resources = uct_gaudi_query_md_resources,
+    .md_open            = uct_gaudi_copy_md_open,
+    .cm_open            = (uct_component_cm_open_func_t)ucs_empty_function_return_unsupported,
+    .rkey_unpack        = uct_md_stub_rkey_unpack,
+    .rkey_ptr           = (uct_component_rkey_ptr_func_t)ucs_empty_function_return_unsupported,
+    .rkey_release       = (uct_component_rkey_release_func_t)ucs_empty_function_return_success,
+    .rkey_compare       = uct_base_rkey_compare,
+    .name               = "gaudi_cpy",
+    .md_config          = {
+        .name           = "Gaudi-copy memory domain",
+        .prefix         = "GAUDI_COPY_",
+        .table          = uct_gaudi_copy_md_config_table,
+        .size           = sizeof(uct_gaudi_copy_md_config_t),
+    },
+    .cm_config          = UCS_CONFIG_EMPTY_GLOBAL_LIST_ENTRY,
+    .tl_list            = UCT_COMPONENT_TL_LIST_INITIALIZER(&uct_gaudi_copy_component),
+    .flags              = 0,
+    .md_vfs_init        = (uct_component_md_vfs_init_func_t)ucs_empty_function
+};
+UCT_COMPONENT_REGISTER(&uct_gaudi_copy_component);
