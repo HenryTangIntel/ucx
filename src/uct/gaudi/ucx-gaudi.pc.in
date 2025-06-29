@@ -1,0 +1,13 @@
+#
+# Copyright (c) NVIDIA CORPORATION & AFFILIATES, 2023. ALL RIGHTS RESERVED.
+#
+# See file LICENSE for terms.
+#
+
+Name: @PACKAGE@-gaudi
+Description: Unified Communication X Library GAUDI support
+Version: @VERSION@
+Requires.private: @PACKAGE@
+Libs: -L${libdir}/@modulesubdir@ -luct_gaudi
+Libs.private: @GAUDI_LIBS@
+Cflags: -I${includedir}

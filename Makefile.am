@@ -12,6 +12,8 @@
 
 EXTRA_DIST =
 ACLOCAL_AMFLAGS = -I config/m4
+AM_CPPFLAGS = -I$(top_srcdir)/src
+
 
 noinst_HEADERS = \
 	src/uct/api/uct.h \
@@ -54,8 +56,7 @@ SUBDIRS += \
 	bindings/java \
 	test/apps \
 	examples \
-	cmake \
-	config
+	cmake
 
 if HAVE_GTEST
 SUBDIRS += test/gtest
@@ -64,6 +65,8 @@ endif
 if HAVE_MPICC
 SUBDIRS += test/mpi
 endif
+
+
 
 EXTRA_DIST += contrib/configure-devel
 EXTRA_DIST += contrib/configure-release
