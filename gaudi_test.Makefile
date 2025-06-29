@@ -13,11 +13,11 @@ LIBS = -lucp -luct -lucs -lucm
 # Run path for dynamic libraries
 RPATH = -Wl,-rpath,$(UCX_DIR)/src/ucp/.libs:$(UCX_DIR)/src/uct/.libs:$(UCX_DIR)/src/ucs/.libs:$(UCX_DIR)/src/ucm/.libs
 
-TARGET = gaudi_test_final
+TARGET = gaudi_query_md_resources_test
 
 all: $(TARGET)
 
-$(TARGET): gaudi_test_final.c
+$(TARGET): gaudi_query_md_resources_test.c
 	$(CC) $(CFLAGS) $< -o $@ $(LDFLAGS) $(LIBS) $(RPATH)
 
 clean:
