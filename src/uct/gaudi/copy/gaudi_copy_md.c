@@ -267,7 +267,7 @@ ucs_status_t uct_gaudi_copy_md_open(uct_component_t *component,
         ucs_derived_of(config, uct_gaudi_copy_md_config_t);
     uct_gaudi_md_t *md;
     int i;
-    //int ret;
+    int ret;
 
     ucs_info("Opening Gaudi MD");
     
@@ -293,15 +293,15 @@ ucs_status_t uct_gaudi_copy_md_open(uct_component_t *component,
     }
     
     /* Get device info */
-    /*
-    ret = hlthunk_get_info(md->hlthunk_fd, &md->device_info);
+    ret = hlthunk_get_hw_ip_info(md->hlthunk_fd, &md->hw_info);
     if (ret != 0) {
         ucs_error("Failed to get Gaudi device info");
         hlthunk_close(md->hlthunk_fd);
         ucs_free(md);
         return UCS_ERR_NO_DEVICE;
     }
-    */
+
+    //hlthunk_close(md->hlthunk_fd);
 
     
     md->super.ops = &uct_gaudi_md_ops;

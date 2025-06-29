@@ -10,7 +10,7 @@
 
 typedef struct uct_gaudi_md {
     uct_md_t super;
-    struct hl_info_args device_info; /* Device info obtained via hlthunk_get_info() */
+    struct hlthunk_hw_ip_info hw_info; // Hardware IP information
     int hlthunk_fd;   // Device handle obtained via hlthunk_open()
     enum hlthunk_device_name device_type; /*Type of Gaudi device*/
     struct {
