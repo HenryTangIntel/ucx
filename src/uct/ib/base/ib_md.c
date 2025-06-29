@@ -1294,6 +1294,9 @@ ucs_status_t uct_ib_md_open_common(uct_ib_md_t *md,
         /* check if ROCM KFD driver is loaded */
         uct_ib_check_gpudirect_driver(md, "/dev/kfd", UCS_MEMORY_TYPE_ROCM);
 
+        /* Check for Gaudi GPU-direct support */
+        uct_ib_check_gpudirect_driver(md, "/sys/module/habanalabs/version", UCS_MEMORY_TYPE_GAUDI);
+
         /* Check for dma-buf support */
         uct_ib_md_check_dmabuf(md);
     }
