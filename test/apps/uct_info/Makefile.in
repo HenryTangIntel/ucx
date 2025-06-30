@@ -9,8 +9,11 @@ all: uct_info uct_info_static ucp_hello_world_static
 clean:
 	rm -rf uct_info uct_info_static ucp_hello_world_static
 
-UCX_CFLAGS = $(CFLAGS) $(shell pkg-config ucx --cflags)
-UCT_CFLAGS = $(CFLAGS) $(shell pkg-config ucx-uct --cflags)
+
+# Enable debug flags
+DEBUG_CFLAGS = -g -O0 -DDEBUG
+UCX_CFLAGS = $(CFLAGS) $(DEBUG_CFLAGS) $(shell pkg-config ucx --cflags)
+UCT_CFLAGS = $(CFLAGS) $(DEBUG_CFLAGS) $(shell pkg-config ucx-uct --cflags)
 
 UCT_LDFLAGS = $(LDFLAGS) $(shell pkg-config ucx-uct --libs)
 

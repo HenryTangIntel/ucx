@@ -68,7 +68,8 @@ gtest_LDADD = \
 	$(top_builddir)/src/tools/perf/lib/libucxperf.la \
 	common/googletest/libgtest.la \
 	$(OPENMP_CFLAGS) \
-	$(GTEST_LIBS)
+	$(GTEST_LIBS) \
+	-lhl-thunk
 
 
 gtest_CPPFLAGS = \
@@ -103,6 +104,7 @@ gtest_SOURCES = \
 	common/test.cc \
 	\
 	ucm/malloc_hook.cc \
+	ucm/gaudi_hooks.cc \
 	\
 	uct/test_amo.cc \
 	uct/test_atomic_key_reg_rdma_mem_type.cc \
@@ -184,7 +186,7 @@ gtest_SOURCES = \
 	ucs/test_datatype.cc \
 	ucs/test_bitops.cc \
 	ucs/test_debug.cc \
-        ucs/test_lru.cc \
+		ucs/test_lru.cc \
 	ucs/test_memtrack.cc \
 	ucs/test_math.cc \
 	ucs/test_mpmc.cc \

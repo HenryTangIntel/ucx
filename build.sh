@@ -9,7 +9,7 @@ autoreconf -i
 # Configure with Gaudi support, using system habanalabs and drm includes/libs
 CPPFLAGS="-I/usr/include/habanalabs -I/usr/include/drm -DHAVE_GAUDI=1" \
 LDFLAGS="-L/usr/lib/habanalabs" \
-./contrib/configure-devel --with-gaudi=/usr  --enable-debug --prefix=$PWD/install-debug "$@"
+./contrib/configure-devel --with-gaudi=/usr  --enable-debug --prefix=$PWD/install "$@"
 
 # Build all targets with maximum parallelism
 make -j"$(nproc)"
