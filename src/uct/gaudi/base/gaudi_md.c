@@ -2,6 +2,10 @@
 #include "gaudi_iface.h"
 #include <ucs/sys/module.h>
 #include <ucs/sys/string.h>
+#include <dirent.h>
+#include <fcntl.h>
+#include <string.h>
+#include <unistd.h>
 
 #define UCT_GAUDI_DEV_NAME_MAX_LEN 64
 
@@ -23,16 +27,36 @@ int uct_gaudi_base_get_device_fd(int device_index)
 
 ucs_status_t uct_gaudi_base_info_init(void)
 {
+    DIR *dir;
+    struct dirent *entry;
+    int dev_idx = 0;
+
     uct_gaudi_base_info.num_devices = 0;
-    // Initialize the Gaudi base info structure
-    // This is a placeholder for actual initialization logic
-    // For example, you might want to query the system for available Gaudi devices
-    // and populate the device_fd and device_name arrays accordingly.
-    
-    // Example initialization (replace with actual logic):
-    uct_gaudi_base_info.device_fd[0] = 0; // Example file descriptor
-    ucs_strncpy_zero(uct_gaudi_base_info.device_name[0], "gaudi_device_0", UCT_GAUDI_DEV_NAME_MAX_LEN);
-    uct_gaudi_base_info.num_devices = 1;
+
+    dir = opendir("/sys/class/accel/");
+    if (!dir) {
+        ucs_error("Failed to open /sys/class/accel/ directory");
+        return UCS_ERR_IO_ERROR;
+    }
+
+    while ((entry = readdir(dir)) != NULL && dev_idx < 8) {
+        // Skip "." and ".."
+        if (entry->d_name[0] == '.')
+            continue;
+        // Optionally, filter for Gaudi-specific device names if needed
+        // For now, accept all devices under accel
+        uct_gaudi_base_info.device_fd[dev_idx] = -1; // Not opening device
+        ucs_strncpy_zero(uct_gaudi_base_info.device_name[dev_idx], entry->d_name, UCT_GAUDI_DEV_NAME_MAX_LEN);
+        dev_idx++;
+    }
+    closedir(dir);
+
+    uct_gaudi_base_info.num_devices = dev_idx;
+
+    if (dev_idx == 0) {
+        ucs_error("No Gaudi devices found in /sys/class/accel/");
+        return UCS_ERR_NO_DEVICE;
+    }
 
     return UCS_OK;
 }
@@ -48,7 +72,6 @@ int uct_gaudi_base_init(void)
             continue;
         }
     }
-    uct_gaudi_base_info.num_devices = 0;
     return UCS_OK;
 
 }
