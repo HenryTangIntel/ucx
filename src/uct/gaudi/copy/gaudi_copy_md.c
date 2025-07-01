@@ -3,6 +3,8 @@
 #include <string.h>
 #include <limits.h>
 #include <stdbool.h>
+#include <unistd.h>
+#include <sys/stat.h>
 #include <ucs/debug/log.h>
 #include <ucs/sys/sys.h>
 #include <ucs/debug/memtrack_int.h>
@@ -76,6 +78,11 @@ static ucs_config_field_t uct_gaudi_copy_md_config_table[] = {
 
 
 
+// Forward declarations
+static ucs_status_t uct_gaudi_copy_md_mem_query(uct_md_h uct_md, const void *address,
+                                               size_t length,
+                                               uct_md_mem_attr_t *mem_attr_p);
+
 ucs_status_t uct_gaudi_copy_md_query(uct_md_h md, uct_md_attr_v2_t *md_attr)
 {
     uct_gaudi_md_t *gaudi_md = ucs_derived_of(md, uct_gaudi_md_t);
@@ -83,6 +90,10 @@ ucs_status_t uct_gaudi_copy_md_query(uct_md_h md, uct_md_attr_v2_t *md_attr)
     md_attr->flags = UCT_MD_FLAG_REG | 
                     UCT_MD_FLAG_ALLOC |
                     UCT_MD_FLAG_NEED_RKEY;
+                    
+    if (gaudi_md->config.dmabuf_supported) {
+        md_attr->flags |= UCT_MD_FLAG_REG_DMABUF;
+    }
     
     md_attr->reg_mem_types = UCS_BIT(UCS_MEMORY_TYPE_HOST) |
                             UCS_BIT(UCS_MEMORY_TYPE_UNKNOWN); /* Gaudi memory type */
@@ -151,13 +162,24 @@ static ucs_status_t uct_gaudi_copy_mem_alloc(uct_md_h md, size_t *length_p,
         ucs_error("Failed to allocate Gaudi memory handle on host");
         return UCS_ERR_NO_MEMORY;
     }
-    
-    gaudi_memh->vaddr = (void *)addr;
+     gaudi_memh->vaddr = (void *)addr;
     gaudi_memh->size = *length_p;
     gaudi_memh->handle = handle;
     gaudi_memh->dev_addr = addr;
     gaudi_memh->dmabuf_fd = -1;
-    
+
+    /* Optionally export as DMA-BUF if flags indicate it */
+    if (flags & UCT_MD_MEM_FLAG_FIXED) {
+        /* Export device memory as DMA-BUF for sharing */
+        int dmabuf_fd = uct_gaudi_export_dmabuf(gaudi_md, gaudi_memh);
+        if (dmabuf_fd >= 0) {
+            gaudi_memh->dmabuf_fd = dmabuf_fd;
+            ucs_debug("Exported allocated memory as DMA-BUF fd %d", dmabuf_fd);
+        } else {
+            ucs_warn("Failed to export allocated memory as DMA-BUF");
+        }
+    }
+
     *address_p = (void *)addr;
     *memh_p = gaudi_memh;
     
@@ -195,6 +217,13 @@ static ucs_status_t uct_gaudi_copy_mem_free(uct_md_h md, uct_mem_h memh)
 {
     uct_gaudi_mem_t *gaudi_memh = memh;
     
+    /* Close DMA-BUF file descriptor if it was created */
+    if (gaudi_memh->dmabuf_fd >= 0) {
+        close(gaudi_memh->dmabuf_fd);
+        ucs_debug("Closed DMA-BUF fd %d during memory free", 
+                  gaudi_memh->dmabuf_fd);
+    }
+    
 #ifdef HAVE_HLTHUNK_H
     uct_gaudi_md_t *gaudi_md = ucs_derived_of(md, uct_gaudi_md_t);
     if (gaudi_md->hlthunk_fd >= 0 && gaudi_memh->handle != 0) {
@@ -229,19 +258,63 @@ void uct_gaudi_copy_md_close(uct_md_h  uct_md)
 
 static ucs_status_t uct_gaudi_copy_mem_reg_internal(
         uct_md_h uct_md, void *address, size_t length,
-        int pg_align_addr, uct_gaudi_copy_md_t *mem_hndl)
+        int export_dmabuf, uct_gaudi_mem_t *mem_hndl)
 {
     void *dev_addr = NULL;
 
     ucs_assert((address != NULL) && (length != 0));
 
- 
-
     mem_hndl->vaddr    = address;
-    mem_hndl->dev_ptr  = dev_addr;
-    mem_hndl->reg_size = length;
+    mem_hndl->dev_addr = (uint64_t)dev_addr;
+    mem_hndl->size     = length;
+    mem_hndl->handle   = 0;
+    mem_hndl->dmabuf_fd = -1;
 
-    ucs_trace("Registered addr %p len %zu dev addr %p", address, length, dev_addr);
+#ifdef HAVE_HLTHUNK_H
+    uct_gaudi_md_t *gaudi_md = ucs_derived_of(uct_md, uct_gaudi_md_t);
+    
+    /* Try to export memory as DMA-BUF if requested and supported */
+    if (export_dmabuf && gaudi_md->config.dmabuf_supported && 
+        gaudi_md->hlthunk_fd >= 0) {
+        
+        ucs_trace("Attempting DMA-BUF export for address %p, length %zu", 
+                  address, length);
+        
+        /* Note: This is a placeholder for actual DMA-BUF export.
+         * Real implementation would use hlthunk DMA-BUF export functions
+         * when available in the hlthunk API. For now, we simulate the
+         * interface preparation. */
+        
+        /* Hypothetical hlthunk DMA-BUF export call:
+         * int dmabuf_fd = hlthunk_export_dmabuf(gaudi_md->hlthunk_fd, 
+         *                                      address, length);
+         * if (dmabuf_fd >= 0) {
+         *     mem_hndl->dmabuf_fd = dmabuf_fd;
+         *     ucs_debug("Exported DMA-BUF fd %d for address %p", 
+         *               dmabuf_fd, address);
+         * }
+         */
+        
+    if (export_dmabuf && gaudi_md->config.dmabuf_supported && 
+        gaudi_md->hlthunk_fd >= 0) {
+        /* Export the registered memory as DMA-BUF */
+        mem_hndl->dmabuf_fd = uct_gaudi_export_dmabuf(gaudi_md, mem_hndl);
+        if (mem_hndl->dmabuf_fd >= 0) {
+            ucs_debug("Exported registered memory as DMA-BUF fd %d for addr %p", 
+                      mem_hndl->dmabuf_fd, address);
+        } else {
+            ucs_debug("Failed to export registered memory as DMA-BUF for addr %p", 
+                      address);
+        }
+    }
+#else
+    /* Suppress unused parameter warning when hlthunk is not available */
+    (void)uct_md;
+    (void)export_dmabuf;
+#endif
+
+    ucs_trace("Registered addr %p len %zu dev addr %p dmabuf_fd %d", 
+              address, length, dev_addr, mem_hndl->dmabuf_fd);
     return UCS_OK;
 }
 
@@ -251,23 +324,42 @@ UCS_PROFILE_FUNC(ucs_status_t, uct_gaudi_copy_mem_reg,
                  uct_md_h md, void *address, size_t length,
                  const uct_md_mem_reg_params_t *params, uct_mem_h *memh_p)
 {
-
-    uct_gaudi_copy_md_t *mem_hndl = NULL;
+    uct_gaudi_md_t *gaudi_md = ucs_derived_of(md, uct_gaudi_md_t);
+    uct_gaudi_mem_t *gaudi_memh = NULL;
     ucs_status_t status;
+    int export_dmabuf = 0;
 
-    mem_hndl = ucs_malloc(sizeof(uct_gaudi_copy_md_t), "gaudi_copy handle");
-    if (NULL == mem_hndl) {
-        ucs_error("failed to allocate memory for gaudi_copy_md_t");
+    /* Check if DMA-BUF export is requested via parameters */
+    if (params != NULL) {
+        /* Check for DMA-BUF related parameters in the future API */
+        export_dmabuf = gaudi_md->config.dmabuf_supported;
+        
+        /* In future API versions, check for:
+         * - params->field_mask & UCT_MD_MEM_REG_FIELD_DMABUF_EXPORT
+         * - params->export_dmabuf flag
+         */
+    }
+
+    gaudi_memh = ucs_malloc(sizeof(uct_gaudi_mem_t), "gaudi_mem_handle");
+    if (NULL == gaudi_memh) {
+        ucs_error("failed to allocate memory for gaudi_mem_t");
         return UCS_ERR_NO_MEMORY;
     }
 
-    status = uct_gaudi_copy_mem_reg_internal(md, address, length, 1, mem_hndl);
+    status = uct_gaudi_copy_mem_reg_internal(md, address, length, 
+                                           export_dmabuf, gaudi_memh);
     if (status != UCS_OK) {
-        ucs_free(mem_hndl);
+        ucs_free(gaudi_memh);
         return status;
     }
 
-    *memh_p = mem_hndl;
+    /* Additional DMA-BUF functionality can be added here */
+    if (gaudi_memh->dmabuf_fd >= 0) {
+        ucs_debug("Memory registration created DMA-BUF fd %d", 
+                  gaudi_memh->dmabuf_fd);
+    }
+
+    *memh_p = gaudi_memh;
     return UCS_OK;
 }
 
@@ -275,6 +367,27 @@ UCS_PROFILE_FUNC(ucs_status_t, uct_gaudi_copy_mem_dereg,
                  (md, params),
                  uct_md_h md, const uct_md_mem_dereg_params_t *params)
 {
+    uct_gaudi_mem_t *gaudi_memh;
+    
+    if (params == NULL || params->memh == NULL) {
+        return UCS_ERR_INVALID_PARAM;
+    }
+    
+    gaudi_memh = (uct_gaudi_mem_t *)params->memh;
+    
+    /* Close DMA-BUF file descriptor if it was created */
+    if (gaudi_memh->dmabuf_fd >= 0) {
+        close(gaudi_memh->dmabuf_fd);
+        ucs_debug("Closed DMA-BUF fd %d for address %p", 
+                  gaudi_memh->dmabuf_fd, gaudi_memh->vaddr);
+    }
+    
+    ucs_trace("Deregistering addr %p len %zu", 
+              gaudi_memh->vaddr, gaudi_memh->size);
+    
+    /* Free the memory handle */
+    ucs_free(gaudi_memh);
+    
     return UCS_OK;
 }
 
@@ -287,6 +400,102 @@ UCS_PROFILE_FUNC(ucs_status_t, uct_gaudi_copy_md_detect_memory_type,
 }
 
 
+#ifdef HAVE_HLTHUNK_H
+
+/**
+ * Export Gaudi device memory as DMA-BUF file descriptor
+ * 
+ * @param gaudi_md    Gaudi memory domain
+ * @param gaudi_memh  Gaudi memory handle containing device memory
+ * @return DMA-BUF file descriptor on success, -1 on failure
+ */
+static int uct_gaudi_export_dmabuf(uct_gaudi_md_t *gaudi_md, 
+                                   uct_gaudi_mem_t *gaudi_memh)
+{
+    int dmabuf_fd = -1;
+    
+    if (gaudi_md->hlthunk_fd < 0 || gaudi_memh->handle == 0) {
+        ucs_debug("Cannot export DMA-BUF: invalid device or memory handle");
+        return -1;
+    }
+    
+#ifdef HAVE_HLTHUNK_H
+    /* 
+     * Use hlthunk API to export device memory as DMA-BUF
+     * This creates a file descriptor that can be shared with other devices like MLX NICs
+     */
+    dmabuf_fd = hlthunk_device_mapped_memory_export_dmabuf_fd(
+        gaudi_md->hlthunk_fd, gaudi_memh->dev_addr, gaudi_memh->size, 
+        0, (O_RDWR | O_CLOEXEC));
+    
+    if (dmabuf_fd < 0) {
+        ucs_debug("hlthunk_device_mapped_memory_export_dmabuf_fd failed for "
+                  "handle 0x%lx, addr 0x%lx, size %zu: %m", 
+                  gaudi_memh->handle, gaudi_memh->dev_addr, gaudi_memh->size);
+        return -1;
+    }
+    
+    ucs_debug("Exported Gaudi memory as DMA-BUF: handle=0x%lx addr=0x%lx "
+              "size=%zu fd=%d", gaudi_memh->handle, gaudi_memh->dev_addr, 
+              gaudi_memh->size, dmabuf_fd);
+#else
+    ucs_debug("hlthunk not available, DMA-BUF export not supported");
+#endif
+    
+    return dmabuf_fd;
+}
+
+/**
+ * Import DMA-BUF file descriptor to create Gaudi memory handle
+ * 
+ * @param gaudi_md    Gaudi memory domain  
+ * @param dmabuf_fd   DMA-BUF file descriptor to import
+ * @param offset      Offset within the DMA-BUF
+ * @param size        Size of memory region
+ * @param gaudi_memh  Output memory handle
+ * @return UCS_OK on success, error code on failure
+ */
+static ucs_status_t uct_gaudi_import_dmabuf(uct_gaudi_md_t *gaudi_md,
+                                           int dmabuf_fd, size_t offset,
+                                           size_t size, uct_gaudi_mem_t *gaudi_memh)
+{
+    uint64_t handle = 0;
+    uint64_t dev_addr = 0;
+    
+    if (gaudi_md->hlthunk_fd < 0 || dmabuf_fd < 0) {
+        return UCS_ERR_INVALID_PARAM;
+    }
+    
+    /*
+     * Placeholder for actual hlthunk DMA-BUF import implementation
+     * 
+     * The real implementation would use hlthunk API to import a DMA-BUF
+     * file descriptor and create a device memory handle:
+     * 
+     * handle = hlthunk_import_dmabuf(gaudi_md->hlthunk_fd, 
+     *                               dmabuf_fd, offset, size);
+     * if (handle == 0) {
+     *     return UCS_ERR_IO_ERROR;
+     * }
+     * 
+     * dev_addr = hlthunk_device_memory_map(gaudi_md->hlthunk_fd, handle, 0);
+     */
+    
+    gaudi_memh->handle = handle;
+    gaudi_memh->dev_addr = dev_addr;
+    gaudi_memh->size = size;
+    gaudi_memh->dmabuf_fd = dmabuf_fd;  /* Keep reference to original fd */
+    gaudi_memh->vaddr = NULL;  /* DMA-BUF imports may not have host mapping */
+    
+    ucs_debug("DMA-BUF import prepared for fd %d, size %zu "
+              "(awaiting hlthunk API implementation)", dmabuf_fd, size);
+    
+    return UCS_OK;
+}
+
+#endif /* HAVE_HLTHUNK_H */
+
+
 static uct_md_ops_t uct_gaudi_md_ops = {
     .close              = uct_gaudi_copy_md_close,
     .query              = uct_gaudi_copy_md_query,
@@ -296,6 +505,7 @@ static uct_md_ops_t uct_gaudi_md_ops = {
     .mem_reg            = uct_gaudi_copy_mem_reg,
     .mem_dereg          = uct_gaudi_copy_mem_dereg,
     .mem_attach         = ucs_empty_function_return_unsupported,
+    .mem_query          = uct_gaudi_copy_md_mem_query,
     .detect_memory_type = uct_gaudi_copy_md_detect_memory_type
 };
 
@@ -368,6 +578,72 @@ ucs_status_t uct_gaudi_copy_md_open(uct_component_t *component,
     *md_p = &md->super;
     
     ucs_debug("Opened Gaudi MD device_index=%d", md->device_index);
+    
+    return UCS_OK;
+}
+
+
+static ucs_status_t uct_gaudi_copy_md_mem_query(uct_md_h uct_md, const void *address,
+                                               size_t length,
+                                               uct_md_mem_attr_t *mem_attr_p)
+{
+    uct_gaudi_md_t *gaudi_md = ucs_derived_of(uct_md, uct_gaudi_md_t);
+    ucs_memory_type_t mem_type;
+    ucs_status_t status;
+    
+    if (!(mem_attr_p->field_mask & (UCT_MD_MEM_ATTR_FIELD_DMABUF_FD |
+                                    UCT_MD_MEM_ATTR_FIELD_DMABUF_OFFSET))) {
+        /* No DMA-BUF attributes requested */
+        return UCS_OK;
+    }
+    
+    /* Check if this is Gaudi device memory */
+    status = uct_gaudi_copy_md_detect_memory_type(uct_md, address, length, &mem_type);
+    if (status != UCS_OK) {
+        return status;
+    }
+    
+    if (mem_type != UCS_MEMORY_TYPE_GAUDI) {
+        /* Not Gaudi memory, set invalid DMA-BUF fd */
+        if (mem_attr_p->field_mask & UCT_MD_MEM_ATTR_FIELD_DMABUF_FD) {
+            mem_attr_p->dmabuf_fd = UCT_DMABUF_FD_INVALID;
+        }
+        if (mem_attr_p->field_mask & UCT_MD_MEM_ATTR_FIELD_DMABUF_OFFSET) {
+            mem_attr_p->dmabuf_offset = 0;
+        }
+        return UCS_OK;
+    }
+    
+    /* For Gaudi memory, we need to export it as DMA-BUF */
+    if (mem_attr_p->field_mask & UCT_MD_MEM_ATTR_FIELD_DMABUF_FD) {
+        if (!gaudi_md->config.dmabuf_supported) {
+            mem_attr_p->dmabuf_fd = UCT_DMABUF_FD_INVALID;
+        } else {
+#ifdef HAVE_HLTHUNK_H
+            /* Try to export this memory region as DMA-BUF */
+            int dmabuf_fd = hlthunk_device_mapped_memory_export_dmabuf_fd(
+                gaudi_md->hlthunk_fd, (uint64_t)address, length, 
+                0, (O_RDWR | O_CLOEXEC));
+            
+            if (dmabuf_fd >= 0) {
+                mem_attr_p->dmabuf_fd = dmabuf_fd;
+                ucs_debug("Exported Gaudi memory region as DMA-BUF: "
+                          "addr=%p len=%zu fd=%d", address, length, dmabuf_fd);
+            } else {
+                mem_attr_p->dmabuf_fd = UCT_DMABUF_FD_INVALID;
+                ucs_debug("Failed to export Gaudi memory as DMA-BUF: "
+                          "addr=%p len=%zu: %m", address, length);
+            }
+#else
+            mem_attr_p->dmabuf_fd = UCT_DMABUF_FD_INVALID;
+#endif
+        }
+    }
+    
+    if (mem_attr_p->field_mask & UCT_MD_MEM_ATTR_FIELD_DMABUF_OFFSET) {
+        /* For Gaudi, offset is typically 0 as we export exact regions */
+        mem_attr_p->dmabuf_offset = 0;
+    }
     
     return UCS_OK;
 }
