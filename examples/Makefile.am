@@ -11,7 +11,10 @@ dist_examples_DATA =   \
 	ucp_hello_world.c  \
 	uct_hello_world.c  \
 	ucp_client_server.c \
-	ucp_util.h
+	ucp_util.h \
+	gaudi_memory_example.c \
+	ucp_gaudi_example.c \
+	gaudi_transfer_example.c
 
 if HAVE_CUDA
 EXAMPLE_CUDA_LD_FLAGS = $(CUDA_LDFLAGS)
@@ -34,14 +37,20 @@ installcheck-local:
 	$(CC) -o uct_hello_world   $(examplesdir)/uct_hello_world.c   -luct $(EXAMPLE_CCLD_FLAGS)
 	$(CC) -o ucp_hello_world   $(examplesdir)/ucp_hello_world.c   -lucp $(EXAMPLE_CCLD_FLAGS)
 	$(CC) -o ucp_client_server $(examplesdir)/ucp_client_server.c -lucp $(EXAMPLE_CCLD_FLAGS)
-	$(RM) *.o uct_hello_world ucp_hello_world ucp_client_server
+	$(CC) -o gaudi_memory_example $(examplesdir)/gaudi_memory_example.c -luct $(EXAMPLE_CCLD_FLAGS)
+	$(CC) -o ucp_gaudi_example $(examplesdir)/ucp_gaudi_example.c -lucp $(EXAMPLE_CCLD_FLAGS)
+	$(CC) -o gaudi_transfer_example $(examplesdir)/gaudi_transfer_example.c -luct $(EXAMPLE_CCLD_FLAGS)
+	$(RM) *.o uct_hello_world ucp_hello_world ucp_client_server gaudi_memory_example ucp_gaudi_example gaudi_transfer_example
 
 if HAVE_EXAMPLES
 
 noinst_PROGRAMS = \
 	ucp_hello_world \
 	uct_hello_world \
-	ucp_client_server
+	ucp_client_server \
+	gaudi_memory_example \
+	ucp_gaudi_example \
+	gaudi_transfer_example
 
 ucp_hello_world_SOURCES  = ucp_hello_world.c
 ucp_hello_world_CFLAGS   = $(BASE_CFLAGS) $(EXAMPLE_CUDA_CFLAGS)
@@ -66,5 +75,29 @@ ucp_client_server_LDFLAGS  = $(EXAMPLE_CUDA_LD_FLAGS)
 ucp_client_server_LDADD    = $(top_builddir)/src/ucs/libucs.la \
                              $(top_builddir)/src/ucp/libucp.la \
                              $(EXAMPLE_CUDA_LIBS)
+
+gaudi_memory_example_SOURCES  = gaudi_memory_example.c
+gaudi_memory_example_CFLAGS   = $(BASE_CFLAGS) $(EXAMPLE_CUDA_CFLAGS)
+gaudi_memory_example_CPPFLAGS = $(BASE_CPPFLAGS) $(EXAMPLE_CUDA_CPPFLAGS)
+gaudi_memory_example_LDFLAGS  = $(EXAMPLE_CUDA_LD_FLAGS)
+gaudi_memory_example_LDADD    = $(top_builddir)/src/ucs/libucs.la \
+                                $(top_builddir)/src/uct/libuct.la \
+                                $(EXAMPLE_CUDA_LIBS)
+
+ucp_gaudi_example_SOURCES  = ucp_gaudi_example.c
+ucp_gaudi_example_CFLAGS   = $(BASE_CFLAGS) $(EXAMPLE_CUDA_CFLAGS)
+ucp_gaudi_example_CPPFLAGS = $(BASE_CPPFLAGS) $(EXAMPLE_CUDA_CPPFLAGS)
+ucp_gaudi_example_LDFLAGS  = $(EXAMPLE_CUDA_LD_FLAGS)
+ucp_gaudi_example_LDADD    = $(top_builddir)/src/ucs/libucs.la \
+                             $(top_builddir)/src/ucp/libucp.la \
+                             $(EXAMPLE_CUDA_LIBS)
+
+gaudi_transfer_example_SOURCES  = gaudi_transfer_example.c
+gaudi_transfer_example_CFLAGS   = $(BASE_CFLAGS) $(EXAMPLE_CUDA_CFLAGS)
+gaudi_transfer_example_CPPFLAGS = $(BASE_CPPFLAGS) $(EXAMPLE_CUDA_CPPFLAGS)
+gaudi_transfer_example_LDFLAGS  = $(EXAMPLE_CUDA_LD_FLAGS)
+gaudi_transfer_example_LDADD    = $(top_builddir)/src/ucs/libucs.la \
+                                  $(top_builddir)/src/uct/libuct.la \
+                                  $(EXAMPLE_CUDA_LIBS)
 
 endif
