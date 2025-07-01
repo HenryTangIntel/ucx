@@ -17,9 +17,43 @@ uct_gaudi_base_query_devices_common(
         uct_md_h md, uct_tl_device_resource_t **tl_devices_p,
         unsigned *num_tl_devices_p)
 {
-    return uct_single_device_resource(md, "gaudi", UCT_DEVICE_TYPE_ACC,
-                                      UCS_SYS_DEVICE_ID_UNKNOWN, tl_devices_p,
-                                      num_tl_devices_p);
+    uct_tl_device_resource_t *devices;
+    unsigned num_devices;
+    ucs_status_t status;
+    int i;
+    
+    /* Initialize Gaudi base to detect devices */
+    status = uct_gaudi_base_init();
+    if (status != UCS_OK) {
+        *tl_devices_p = NULL;
+        *num_tl_devices_p = 0;
+        return UCS_OK; /* No devices available, not an error */
+    }
+    
+    /* Get number of detected Gaudi devices */
+    num_devices = uct_gaudi_base_info.num_devices;
+    if (num_devices == 0) {
+        *tl_devices_p = NULL;
+        *num_tl_devices_p = 0;
+        return UCS_OK;
+    }
+    
+    devices = ucs_calloc(num_devices, sizeof(*devices), "gaudi devices");
+    if (devices == NULL) {
+        return UCS_ERR_NO_MEMORY;
+    }
+    
+    /* Create device resources for each detected Gaudi device */
+    for (i = 0; i < num_devices; i++) {
+        ucs_strncpy_zero(devices[i].name, uct_gaudi_base_info.device_name[i], 
+                        UCT_DEVICE_NAME_MAX);
+        devices[i].type = UCT_DEVICE_TYPE_ACC;
+        devices[i].sys_device = UCS_SYS_DEVICE_ID_UNKNOWN;
+    }
+    
+    *tl_devices_p = devices;
+    *num_tl_devices_p = num_devices;
+    return UCS_OK;
 }
 
 ucs_status_t
@@ -48,16 +82,23 @@ ucs_status_t uct_gaudi_base_iface_event_fd_get(uct_iface_h tl_iface, int *fd_p)
 
 ucs_status_t uct_gaudi_base_check_device_name(const uct_iface_params_t *params)
 {
+    int i;
+    const char *dev_name;
+    
     UCT_CHECK_PARAM(params->field_mask & UCT_IFACE_PARAM_FIELD_DEVICE,
                     "UCT_IFACE_PARAM_FIELD_DEVICE is not defined");
 
-    if (strncmp(params->mode.device.dev_name, UCT_GAUDI_DEV_NAME,
-                strlen(UCT_GAUDI_DEV_NAME)) != 0) {
-        ucs_error("no device was found: %s", params->mode.device.dev_name);
-        return UCS_ERR_NO_DEVICE;
+    dev_name = params->mode.device.dev_name;
+    
+    /* Check if the device name matches any of the detected Gaudi devices */
+    for (i = 0; i < uct_gaudi_base_info.num_devices; i++) {
+        if (strcmp(dev_name, uct_gaudi_base_info.device_name[i]) == 0) {
+            return UCS_OK;
+        }
     }
-
-    return UCS_OK;
+    
+    ucs_error("Gaudi device not found: %s", dev_name);
+    return UCS_ERR_NO_DEVICE;
 }
 
 UCS_CLASS_INIT_FUNC(uct_gaudi_iface_t, uct_iface_ops_t *tl_ops,

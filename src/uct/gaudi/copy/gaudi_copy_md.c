@@ -2,6 +2,7 @@
 #include "../base/gaudi_iface.h"
 #include <string.h>
 #include <limits.h>
+#include <stdbool.h>
 #include <ucs/debug/log.h>
 #include <ucs/sys/sys.h>
 #include <ucs/debug/memtrack_int.h>
@@ -10,19 +11,25 @@
 #include <ucs/type/class.h>
 #include <ucs/sys/math.h>
 #include <uct/api/v2/uct_v2.h>
+
+/* Conditional include for Habana Labs driver */
+#ifdef HAVE_HLTHUNK_H
 #include <hlthunk.h>
+#endif
 
 #define UCT_GAUDI_DEV_NAME_MAX_LEN 64
 #define UCT_GAUDI_MAX_DEVICES      32
 
 uct_component_t uct_gaudi_copy_component;
 
+#ifdef HAVE_HLTHUNK_H
 enum hlthunk_device_name devices[] = {
         HLTHUNK_DEVICE_GAUDI3,
         HLTHUNK_DEVICE_GAUDI2,
         HLTHUNK_DEVICE_GAUDI,
         HLTHUNK_DEVICE_DONT_CARE
 };
+#endif
 
 static const char *uct_gaudi_pref_loc[] = {
     [UCT_GAUDI_PREF_LOC_CPU]  = "cpu",
@@ -115,8 +122,10 @@ static ucs_status_t uct_gaudi_copy_mem_alloc(uct_md_h md, size_t *length_p,
                                            unsigned flags, const char *alloc_name, 
                                            uct_mem_h *memh_p)
 {
-    uct_gaudi_md_t *gaudi_md = ucs_derived_of(md, uct_gaudi_md_t);
     uct_gaudi_mem_t *gaudi_memh;
+    
+#ifdef HAVE_HLTHUNK_H
+    uct_gaudi_md_t *gaudi_md = ucs_derived_of(md, uct_gaudi_md_t);
     uint64_t handle;
     uint64_t addr;
     
@@ -132,7 +141,6 @@ static ucs_status_t uct_gaudi_copy_mem_alloc(uct_md_h md, size_t *length_p,
     addr = hlthunk_device_memory_map(gaudi_md->hlthunk_fd, handle, 0);
     if (addr == 0) {
         hlthunk_device_memory_free(gaudi_md->hlthunk_fd, handle);
-        //hlthunk_close(gaudi_md->hlthunk_fd);
         ucs_error("Failed to map device memory handle 0x%lx", handle);
         return UCS_ERR_NO_MEMORY;
     }
@@ -144,30 +152,61 @@ static ucs_status_t uct_gaudi_copy_mem_alloc(uct_md_h md, size_t *length_p,
         return UCS_ERR_NO_MEMORY;
     }
     
-    gaudi_memh->vaddr = (void *) addr;
+    gaudi_memh->vaddr = (void *)addr;
     gaudi_memh->size = *length_p;
     gaudi_memh->handle = handle;
-    gaudi_memh->dev_addr = (uint64_t)handle; /* device handle as address */
+    gaudi_memh->dev_addr = addr;
+    gaudi_memh->dmabuf_fd = -1;
     
-    *address_p = (void *) addr;
+    *address_p = (void *)addr;
     *memh_p = gaudi_memh;
     
-    ucs_trace("Allocated Gaudi memory %p size %zu handle 0x%lx",
-              (void *) addr, *length_p, handle);
+    return UCS_OK;
+#else
+    /* Without hlthunk, use regular host memory allocation */
+    (void)md; /* Suppress unused parameter warning */
+    
+    gaudi_memh = ucs_calloc(1, sizeof(*gaudi_memh), "gaudi_memh");
+    if (gaudi_memh == NULL) {
+        return UCS_ERR_NO_MEMORY;
+    }
+    
+    gaudi_memh->vaddr = ucs_malloc(*length_p, "gaudi_mem");
+    if (gaudi_memh->vaddr == NULL) {
+        ucs_free(gaudi_memh);
+        return UCS_ERR_NO_MEMORY;
+    }
+    
+    gaudi_memh->size = *length_p;
+    gaudi_memh->handle = 0;
+    gaudi_memh->dev_addr = (uint64_t)gaudi_memh->vaddr;
+    gaudi_memh->dmabuf_fd = -1;
+    
+    *address_p = gaudi_memh->vaddr;
+    *memh_p = gaudi_memh;
     
     return UCS_OK;
+#endif
 }
 
 
 
 static ucs_status_t uct_gaudi_copy_mem_free(uct_md_h md, uct_mem_h memh)
 {
-    uct_gaudi_md_t *gaudi_md = ucs_derived_of(md, uct_gaudi_md_t);
     uct_gaudi_mem_t *gaudi_memh = memh;
     
-    if (gaudi_memh->vaddr != NULL || gaudi_memh->handle != 0) {
+#ifdef HAVE_HLTHUNK_H
+    uct_gaudi_md_t *gaudi_md = ucs_derived_of(md, uct_gaudi_md_t);
+    if (gaudi_md->hlthunk_fd >= 0 && gaudi_memh->handle != 0) {
         hlthunk_device_memory_free(gaudi_md->hlthunk_fd, gaudi_memh->handle);
     }
+#else
+    /* Without hlthunk, just free the regular memory */
+    (void)md; /* Suppress unused parameter warning */
+    if (gaudi_memh->vaddr != NULL) {
+        ucs_free(gaudi_memh->vaddr);
+    }
+#endif
     
     ucs_free(gaudi_memh);
     return UCS_OK;
@@ -178,7 +217,11 @@ void uct_gaudi_copy_md_close(uct_md_h  uct_md)
     uct_gaudi_md_t *md = ucs_derived_of(uct_md, uct_gaudi_md_t);
     
     if (md->hlthunk_fd >= 0) {
+#ifdef HAVE_HLTHUNK_H
         hlthunk_close(md->hlthunk_fd);
+#else
+        close(md->hlthunk_fd);
+#endif
     }
     
     ucs_free(md);
@@ -266,8 +309,8 @@ ucs_status_t uct_gaudi_copy_md_open(uct_component_t *component,
     const uct_gaudi_copy_md_config_t *md_config =
         ucs_derived_of(config, uct_gaudi_copy_md_config_t);
     uct_gaudi_md_t *md;
-    int i;
-    int ret;
+    ucs_status_t status;
+    int device_index = 0; /* Use first device by default */
 
     ucs_info("Opening Gaudi MD");
     
@@ -276,34 +319,45 @@ ucs_status_t uct_gaudi_copy_md_open(uct_component_t *component,
         return UCS_ERR_NO_MEMORY;
     }
     
-    /* Try to open Gaudi device */
-    md->hlthunk_fd = -1;
-    for (i = 0; i < 4; i++) {
-        md->hlthunk_fd = hlthunk_open(devices[i], NULL);
-        if (md->hlthunk_fd >= 0) {
-            md->device_type = devices[i];
-            break;
+    /* Initialize base device info */
+    status = uct_gaudi_base_init();
+    if (status != UCS_OK) {
+        ucs_debug("No Gaudi devices found, using fallback mode");
+        md->hlthunk_fd = -1;
+        md->device_index = -1;
+    } else {
+        /* Use the first available device */
+        md->hlthunk_fd = uct_gaudi_base_get_device_fd(device_index);
+        md->device_index = device_index;
+        
+#ifdef HAVE_HLTHUNK_H
+        int i, ret;
+        /* Try to open using hlthunk API */
+        for (i = 0; i < 4; i++) {
+            int fd = hlthunk_open(devices[i], NULL);
+            if (fd >= 0) {
+                if (md->hlthunk_fd >= 0) {
+                    close(md->hlthunk_fd); /* Close the raw fd */
+                }
+                md->hlthunk_fd = fd;
+                md->device_type = devices[i];
+                break;
+            }
         }
-    }
-    
-    if (md->hlthunk_fd < 0) {
-        ucs_error("Failed to open Gaudi device");
-        ucs_free(md);
-        return UCS_ERR_NO_DEVICE;
-    }
-    
-    /* Get device info */
-    ret = hlthunk_get_hw_ip_info(md->hlthunk_fd, &md->hw_info);
-    if (ret != 0) {
-        ucs_error("Failed to get Gaudi device info");
-        hlthunk_close(md->hlthunk_fd);
-        ucs_free(md);
-        return UCS_ERR_NO_DEVICE;
+        
+        if (md->hlthunk_fd >= 0) {
+            /* Get device info for real hardware */
+            ret = hlthunk_get_hw_ip_info(md->hlthunk_fd, &md->hw_info);
+            if (ret != 0) {
+                ucs_error("Failed to get Gaudi device info");
+                hlthunk_close(md->hlthunk_fd);
+                ucs_free(md);
+                return UCS_ERR_NO_DEVICE;
+            }
+        }
+#endif
     }
 
-    //hlthunk_close(md->hlthunk_fd);
-
-    
     md->super.ops = &uct_gaudi_md_ops;
     md->super.component = &uct_gaudi_copy_component;
     
@@ -313,7 +367,7 @@ ucs_status_t uct_gaudi_copy_md_open(uct_component_t *component,
     
     *md_p = &md->super;
     
-    ucs_debug("Opened Gaudi MD device_type=%d", md->device_type);
+    ucs_debug("Opened Gaudi MD device_index=%d", md->device_index);
     
     return UCS_OK;
 }

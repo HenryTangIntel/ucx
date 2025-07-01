@@ -5,14 +5,30 @@
 #include <uct/api/uct.h>
 #include <uct/base/uct_md.h>
 #include <ucs/type/status.h>
+
+/* Conditional include for Habana Labs driver */
+#ifdef HAVE_HLTHUNK_H
 #include <hlthunk.h>
+#endif
+
+#define UCT_GAUDI_DEV_NAME_MAX_LEN 64
+
+/* Base info structure for Gaudi devices */
+extern struct uct_gaudi_base_info {
+    int device_fd[8];
+    char device_name[8][UCT_GAUDI_DEV_NAME_MAX_LEN];
+    int num_devices;
+} uct_gaudi_base_info;
 
 
 typedef struct uct_gaudi_md {
     uct_md_t super;
-    struct hlthunk_hw_ip_info hw_info; // Hardware IP information
-    int hlthunk_fd;   // Device handle obtained via hlthunk_open()
-    enum hlthunk_device_name device_type; /*Type of Gaudi device*/
+#ifdef HAVE_HLTHUNK_H
+    struct hlthunk_hw_ip_info hw_info; /* Hardware IP information */
+    enum hlthunk_device_name device_type; /* Type of Gaudi device */
+#endif
+    int hlthunk_fd;   /* Device handle obtained via hlthunk_open() or regular open() */
+    int device_index; /* Index in uct_gaudi_base_info.device_fd array */
     struct {
         int dmabuf_supported; /* DMA_BUF support flag */
     } config;
@@ -53,5 +69,10 @@ ucs_status_t uct_gaudi_md_query(uct_md_h md, uct_md_attr_v2_t *md_attr);
 ucs_status_t uct_gaudi_query_md_resources(uct_component_h component,
                                               uct_md_resource_desc_t **resources_p,
                                               unsigned *num_resources_p);
+
+/* Base device management functions */
+int uct_gaudi_base_init(void);
+void uct_gaudi_base_cleanup(void);
+int uct_gaudi_base_get_device_fd(int device_index);
 
 #endif

@@ -9,12 +9,7 @@
 
 #define UCT_GAUDI_DEV_NAME_MAX_LEN 64
 
-static struct {
-    //gaudi_driver driver;
-    int device_fd [8];
-    char device_name[8][UCT_GAUDI_DEV_NAME_MAX_LEN];
-    int num_devices;
-} uct_gaudi_base_info;
+struct uct_gaudi_base_info uct_gaudi_base_info;
 
 
 int uct_gaudi_base_get_device_fd(int device_index)
@@ -31,9 +26,11 @@ ucs_status_t uct_gaudi_base_info_init(void)
     struct dirent *entry;
     int dev_idx = 0;
     char device_type_path[320];
+    char device_path[320];
     char device_type[32];
     FILE *type_file;
     size_t len;
+    int fd;
 
     uct_gaudi_base_info.num_devices = 0;
 
@@ -43,14 +40,14 @@ ucs_status_t uct_gaudi_base_info_init(void)
         return UCS_ERR_IO_ERROR;
     }
 
-
     while ((entry = readdir(dir)) != NULL && dev_idx < 8) {
         // Skip "." and ".."
         if (entry->d_name[0] == '.')
             continue;
 
         memset(device_type, 0, sizeof(device_type));
-        snprintf(device_type_path, sizeof(device_type_path), "/sys/class/accel/%s/device/device_type", entry->d_name);
+        snprintf(device_type_path, sizeof(device_type_path), 
+                "/sys/class/accel/%s/device/device_type", entry->d_name);
         type_file = fopen(device_type_path, "r");
         if (!type_file) {
             // Not a Gaudi device if attribute missing
@@ -61,6 +58,7 @@ ucs_status_t uct_gaudi_base_info_init(void)
             continue;
         }
         fclose(type_file);
+        
         // Remove trailing newline
         len = strlen(device_type);
         if (len > 0 && device_type[len-1] == '\n') {
@@ -71,8 +69,23 @@ ucs_status_t uct_gaudi_base_info_init(void)
             continue;
         }
 
-        uct_gaudi_base_info.device_fd[dev_idx] = -1; // Not opening device
-        ucs_strncpy_zero(uct_gaudi_base_info.device_name[dev_idx], entry->d_name, UCT_GAUDI_DEV_NAME_MAX_LEN);
+        // Try to open the device for actual hardware access
+        snprintf(device_path, sizeof(device_path), "/dev/accel/%s", entry->d_name);
+        fd = open(device_path, O_RDWR);
+        if (fd < 0) {
+            // Alternative path
+            snprintf(device_path, sizeof(device_path), "/dev/%s", entry->d_name);
+            fd = open(device_path, O_RDWR);
+        }
+        
+        if (fd < 0) {
+            ucs_debug("Cannot open Gaudi device %s: %m", entry->d_name);
+            continue;
+        }
+
+        uct_gaudi_base_info.device_fd[dev_idx] = fd;
+        ucs_strncpy_zero(uct_gaudi_base_info.device_name[dev_idx], 
+                        entry->d_name, UCT_GAUDI_DEV_NAME_MAX_LEN);
         dev_idx++;
     }
     closedir(dir);
@@ -80,11 +93,25 @@ ucs_status_t uct_gaudi_base_info_init(void)
     uct_gaudi_base_info.num_devices = dev_idx;
 
     if (dev_idx == 0) {
-        ucs_error("No Gaudi devices found in /sys/class/accel/");
+        ucs_debug("No accessible Gaudi devices found");
         return UCS_ERR_NO_DEVICE;
     }
 
+    ucs_info("Found %d Gaudi device(s)", dev_idx);
     return UCS_OK;
+}
+
+void uct_gaudi_base_cleanup(void)
+{
+    int i;
+    
+    for (i = 0; i < uct_gaudi_base_info.num_devices; i++) {
+        if (uct_gaudi_base_info.device_fd[i] >= 0) {
+            close(uct_gaudi_base_info.device_fd[i]);
+            uct_gaudi_base_info.device_fd[i] = -1;
+        }
+    }
+    uct_gaudi_base_info.num_devices = 0;
 }
 
 int uct_gaudi_base_init(void)

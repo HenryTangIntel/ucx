@@ -428,7 +428,7 @@ static UCS_CLASS_INIT_FUNC(uct_gaudi_copy_iface_t, uct_md_h md, uct_worker_h wor
 
     UCS_CLASS_CALL_SUPER_INIT(uct_gaudi_iface_t, &uct_gaudi_copy_iface_ops,
                               &uct_gaudi_copy_iface_internal_ops, md, worker,
-                              params, tl_config, "gaudi_cpy");
+                              params, tl_config, "gaudi_copy");
 
     status = uct_gaudi_base_check_device_name(params);
     if (status != UCS_OK) {
@@ -490,7 +490,7 @@ UCS_CLASS_DEFINE_NEW_FUNC(uct_gaudi_copy_iface_t, uct_iface_t, uct_md_h, uct_wor
 static UCS_CLASS_DEFINE_DELETE_FUNC(uct_gaudi_copy_iface_t, uct_iface_t);
 
 
-UCT_TL_DEFINE(&uct_gaudi_copy_component, gaudi_copy, uct_gaudi_base_query_devices,
+UCT_TL_DEFINE(&uct_gaudi_copy_component, gaudi_cpy, uct_gaudi_base_query_devices,
               uct_gaudi_copy_iface_t, "GAUDI_COPY_",
               uct_gaudi_copy_iface_config_table, uct_gaudi_copy_iface_config_t);
 
@@ -660,17 +660,7 @@ static uct_iface_internal_ops_t uct_gaudi_iface_internal_ops = {
     .ep_is_connected       = uct_base_ep_is_connected
 };
 
-// Provide stubs for missing functions if not implemented elsewhere
-ucs_status_t uct_gaudi_base_check_device_name(const uct_iface_params_t *params) {
-    /* TODO: Implement actual device name check */
-    return UCS_OK;
-}
-ucs_status_t uct_gaudi_base_query_devices(uct_md_h md, uct_tl_device_resource_t **tl_devices_p, unsigned *num_tl_devices_p) {
-    /* TODO: Implement actual device query */
-    *tl_devices_p = NULL;
-    *num_tl_devices_p = 0;
-    return UCS_OK;
-}
+
 
 
 static UCS_CLASS_INIT_FUNC(uct_gaudi_iface_t, uct_md_h md, uct_worker_h worker,
