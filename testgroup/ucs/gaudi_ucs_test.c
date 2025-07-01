@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <uct/api/uct.h>
-#include <ucs/api/ucs.h>
 
 void test_memory_operations(uct_md_h md) {
     void *alloc_addr = NULL;
@@ -11,9 +10,8 @@ void test_memory_operations(uct_md_h md) {
     uct_mem_h memh_alloc = NULL, memh_reg = NULL;
     ucs_status_t status;
 
-    /* Test memory allocation */
     printf("\n--- Testing Memory Allocation ---\n");
-    status = uct_md_mem_alloc(md, &length, &alloc_addr, UCS_MEMORY_TYPE_UNKNOWN,
+    status = uct_md_mem_alloc(md, &length, &alloc_addr, UCS_MEMORY_TYPE_HOST,
                               0, "gaudi_alloc", &memh_alloc);
     if (status != UCS_OK) {
         printf("Failed to allocate memory: %s\n", ucs_status_string(status));
@@ -28,7 +26,6 @@ void test_memory_operations(uct_md_h md) {
         printf("Successfully freed allocated memory\n");
     }
 
-    /* Test memory registration */
     printf("\n--- Testing Memory Registration ---\n");
     reg_buf = malloc(length);
     if (!reg_buf) {
@@ -45,7 +42,7 @@ void test_memory_operations(uct_md_h md) {
         memset(reg_buf, 0xCC, length);
         printf("Successfully wrote to registered memory\n");
 
-        /* Verification */
+        // Verification
         int valid = 1;
         for (size_t i = 0; i < length; ++i) {
             if (((unsigned char*)reg_buf)[i] != 0xCC) {
@@ -65,11 +62,11 @@ void test_memory_operations(uct_md_h md) {
 }
 
 int main() {
-    uct_component_h *components;
-    uct_md_h md;
-    uct_md_config_t *md_config;
+    uct_component_h *components = NULL;
+    uct_md_h md = NULL;
+    uct_md_config_t *md_config = NULL;
     uct_md_attr_v2_t md_attr;
-    unsigned num_components;
+    unsigned num_components = 0;
     ucs_status_t status;
     int found_gaudi = 0;
 
@@ -81,6 +78,7 @@ int main() {
 
     printf("Found %u UCT components\n", num_components);
     for (unsigned i = 0; i < num_components; ++i) {
+        printf("Component[%u]: %s\n", i, components[i]->name);
         if (strcmp(components[i]->name, "gaudi") == 0) {
             found_gaudi = 1;
             printf("\n=== Found Gaudi Component ===\n");
@@ -98,10 +96,14 @@ int main() {
                 continue;
             }
 
+            memset(&md_attr, 0, sizeof(md_attr));
             md_attr.field_mask = UCT_MD_ATTR_FIELD_FLAGS |
                                  UCT_MD_ATTR_FIELD_MAX_ALLOC |
                                  UCT_MD_ATTR_FIELD_MAX_REG |
-                                 UCT_MD_ATTR_FIELD_MEM_TYPES;
+                                 UCT_MD_ATTR_FIELD_REG_MEM_TYPES |
+                                 UCT_MD_ATTR_FIELD_ALLOC_MEM_TYPES |
+                                 UCT_MD_ATTR_FIELD_ACCESS_MEM_TYPES |
+                                 UCT_MD_ATTR_FIELD_DETECT_MEM_TYPES;
 
             status = uct_md_query_v2(md, &md_attr);
             if (status != UCS_OK) {
@@ -110,13 +112,24 @@ int main() {
                 continue;
             }
 
-            printf("MD Capabilities: 0x%lx\n", md_attr.flags);
-            printf("Max Allocation: %zu\n", (size_t)md_attr.max_alloc);
-            printf("Max Registration: %zu\n", (size_t)md_attr.max_reg);
-            printf("Supported Memory Types: 0x%lx\n", md_attr.reg_mem_types);
+            printf("MD Capabilities:        0x%lx\n", md_attr.flags);
+            printf("Max Allocation:         %zu bytes\n", (size_t)md_attr.max_alloc);
+            printf("Max Registration:       %zu bytes\n", (size_t)md_attr.max_reg);
+            printf("Reg mem types:          0x%lx\n", md_attr.reg_mem_types);
+            printf("Alloc mem types:        0x%lx\n", md_attr.alloc_mem_types);
+            printf("Access mem types:       0x%lx\n", md_attr.access_mem_types);
+            printf("Detect mem types:       0x%lx\n", md_attr.detect_mem_types);
 
             if (md_attr.flags & UCT_MD_FLAG_ALLOC) {
                 test_memory_operations(md);
+            } else {
+                printf("MD does not support memory allocation\n");
+            }
+
+            if (md_attr.flags & UCT_MD_FLAG_REG) {
+                printf("MD supports memory registration\n");
+            } else {
+                printf("MD does not support memory registration\n");
             }
 
             uct_md_close(md);
@@ -125,6 +138,8 @@ int main() {
 
     if (!found_gaudi) {
         printf("\nGaudi component not found.\n");
+    } else {
+        printf("\nGaudi component test completed.\n");
     }
 
     uct_release_component_list(components);

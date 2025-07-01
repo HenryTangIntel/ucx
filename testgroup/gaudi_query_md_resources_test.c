@@ -5,8 +5,6 @@
 #include <ucs/type/status.h>
 #include <uct/api/uct.h>
 
-// Forward declaration for the function pointer type
-// (matches the static definition in gaudi_md.c)
 typedef ucs_status_t (*uct_gaudi_query_md_resources_func_t)(
     void *component,
     uct_md_resource_desc_t **resources_p,
@@ -19,15 +17,20 @@ int main() {
     unsigned num_resources = 0;
     char *error;
     int success = 0;
+    const char *lib_path = getenv("GAUDI_UCT_LIB");
+    if (!lib_path) {
+        lib_path = "/workspace/ucx/modules/libuct_gaudi.so";
+    }
 
     printf("Opening Gaudi module for uct_gaudi_query_md_resources test...\n");
-    handle = dlopen("/workspace/ucx/modules/libuct_gaudi.so", RTLD_LAZY | RTLD_GLOBAL);
+    handle = dlopen(lib_path, RTLD_LAZY | RTLD_GLOBAL);
     if (!handle) {
         fprintf(stderr, "Cannot open Gaudi module: %s\n", dlerror());
         return 1;
     }
 
     // Try to load the symbol (may be static, so this may fail)
+    dlerror(); // Clear any existing error
     query_func = (uct_gaudi_query_md_resources_func_t)dlsym(handle, "uct_gaudi_query_md_resources");
     error = dlerror();
     if (error != NULL || !query_func) {
@@ -43,11 +46,18 @@ int main() {
         printf("✓ uct_gaudi_query_md_resources succeeded!\n");
         for (unsigned i = 0; i < num_resources; ++i) {
             printf("  Resource[%u]: md_name = %s\n", i, resources[i].md_name);
+#ifdef HAVE_UCT_MD_RESOURCE_DESC_FIELDS
+            printf("    dev_type: %d\n", resources[i].dev_type);
+            printf("    flags:    0x%x\n", resources[i].flags);
+#endif
         }
         free(resources);
         success = 1;
+    } else if (status == UCS_OK && num_resources == 0) {
+        printf("✓ uct_gaudi_query_md_resources succeeded, but no resources found.\n");
+        success = 1;
     } else {
-        printf("✗ uct_gaudi_query_md_resources failed with status: %d\n", status);
+        printf("✗ uct_gaudi_query_md_resources failed with status: %d (%s)\n", status, ucs_status_string(status));
     }
 
     dlclose(handle);

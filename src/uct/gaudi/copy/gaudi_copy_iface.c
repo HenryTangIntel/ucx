@@ -428,7 +428,7 @@ static UCS_CLASS_INIT_FUNC(uct_gaudi_copy_iface_t, uct_md_h md, uct_worker_h wor
 
     UCS_CLASS_CALL_SUPER_INIT(uct_gaudi_iface_t, &uct_gaudi_copy_iface_ops,
                               &uct_gaudi_copy_iface_internal_ops, md, worker,
-                              params, tl_config, "gaudi_copy");
+                              params, tl_config, "gaudi_cpy");
 
     status = uct_gaudi_base_check_device_name(params);
     if (status != UCS_OK) {

@@ -30,6 +30,10 @@ ucs_status_t uct_gaudi_base_info_init(void)
     DIR *dir;
     struct dirent *entry;
     int dev_idx = 0;
+    char device_type_path[320];
+    char device_type[32];
+    FILE *type_file;
+    size_t len;
 
     uct_gaudi_base_info.num_devices = 0;
 
@@ -39,12 +43,34 @@ ucs_status_t uct_gaudi_base_info_init(void)
         return UCS_ERR_IO_ERROR;
     }
 
+
     while ((entry = readdir(dir)) != NULL && dev_idx < 8) {
         // Skip "." and ".."
         if (entry->d_name[0] == '.')
             continue;
-        // Optionally, filter for Gaudi-specific device names if needed
-        // For now, accept all devices under accel
+
+        memset(device_type, 0, sizeof(device_type));
+        snprintf(device_type_path, sizeof(device_type_path), "/sys/class/accel/%s/device/device_type", entry->d_name);
+        type_file = fopen(device_type_path, "r");
+        if (!type_file) {
+            // Not a Gaudi device if attribute missing
+            continue;
+        }
+        if (!fgets(device_type, sizeof(device_type), type_file)) {
+            fclose(type_file);
+            continue;
+        }
+        fclose(type_file);
+        // Remove trailing newline
+        len = strlen(device_type);
+        if (len > 0 && device_type[len-1] == '\n') {
+            device_type[len-1] = '\0';
+        }
+        if (strcmp(device_type, "GAUDI") != 0 && strcmp(device_type, "GAUDI2") != 0) {
+            // Not a Gaudi device
+            continue;
+        }
+
         uct_gaudi_base_info.device_fd[dev_idx] = -1; // Not opening device
         ucs_strncpy_zero(uct_gaudi_base_info.device_name[dev_idx], entry->d_name, UCT_GAUDI_DEV_NAME_MAX_LEN);
         dev_idx++;
