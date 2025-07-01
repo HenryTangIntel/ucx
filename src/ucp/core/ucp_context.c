@@ -577,6 +577,7 @@ static ucs_config_field_t ucp_config_table[] = {
    " - tcp     : sockets over TCP/IP.\n"
    " - cuda    : CUDA (NVIDIA GPU) memory support.\n"
    " - rocm    : ROCm (AMD GPU) memory support.\n"
+   " - gaudi   : Gaudi memory support.\n"
    " - ze      : ZE (Intel GPU) memory support.\n"
    " Using a \\ prefix before a transport name treats it as an explicit transport name\n"
    " and disables aliasing.",
@@ -662,6 +663,7 @@ static ucp_tl_alias_t ucp_tl_aliases[] = {
   { "ugni",  { "ugni_smsg", UCP_TL_AUX("ugni_udt"), "ugni_rdma", NULL } },
   { "cuda",  { "cuda_copy", "cuda_ipc", "gdr_copy", NULL } },
   { "rocm",  { "rocm_copy", "rocm_ipc", "rocm_gdr", NULL } },
+  { "gaudi", { "gaudi_copy", "gaudi_ipc", "gaudi_gdr", NULL}},
   { "ze",    { "ze_copy", "ze_ipc", "ze_gdr", NULL } },
   { NULL }
 };

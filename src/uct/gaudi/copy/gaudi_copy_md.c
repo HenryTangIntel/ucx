@@ -26,7 +26,7 @@ enum hlthunk_device_name devices[] = {
 
 static const char *uct_gaudi_pref_loc[] = {
     [UCT_GAUDI_PREF_LOC_CPU]  = "cpu",
-    [UCT_GAUDI_PREF_LOC_HPU]  = "hpu",
+    [UCT_GAUDI_PREF_LOC_HPU]  = "gaudi",
     [UCT_GAUDI_PREF_LOC_LAST] = NULL,
 };
 
@@ -56,10 +56,10 @@ static ucs_config_field_t uct_gaudi_copy_md_config_table[] = {
                   UCS_CONFIG_TYPE_TERNARY},
 
     {"PREF_LOC", "cpu",
-     "System device designation of a CUDA managed memory buffer"
+     "System device designation of a gaudi managed memory buffer"
      " whose preferred location attribute is not set.\n"
      " cpu - Assume buffer is on the CPU.\n"
-     " gpu - Assume buffer is on the GPU corresponding to buffer's GPU context.",
+     " gaudi - Assume buffer is on the HPU corresponding to buffer's HPU context.",
      ucs_offsetof(uct_gaudi_copy_md_config_t, pref_loc),
      UCS_CONFIG_TYPE_ENUM(uct_gaudi_pref_loc)},
 

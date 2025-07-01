@@ -1,6 +1,7 @@
 #include "gaudi_copy_iface.h"
 #include "gaudi_copy_md.h"
 #include "gaudi_copy_ep.h"
+#include "../base/gaudi_md.h"
 
 #include <uct/gaudi/base/gaudi_iface.h>
 #include <uct/gaudi/base/gaudi_md.h>
@@ -423,17 +424,16 @@ static UCS_CLASS_INIT_FUNC(uct_gaudi_copy_iface_t, uct_md_h md, uct_worker_h wor
     uct_gaudi_copy_iface_config_t *config = ucs_derived_of(tl_config,
                                                           uct_gaudi_copy_iface_config_t);
     ucs_status_t status;
-    //ucs_memory_type_t src, dst;
     ucs_mpool_params_t mp_params;
 
     UCS_CLASS_CALL_SUPER_INIT(uct_gaudi_iface_t, &uct_gaudi_copy_iface_ops,
                               &uct_gaudi_copy_iface_internal_ops, md, worker,
                               params, tl_config, "gaudi_copy");
 
-    //status = uct_gaudi_base_check_device_name(params);
-    //if (status != UCS_OK) {
-    //    return status;
-    //}
+    status = uct_gaudi_base_check_device_name(params);
+    if (status != UCS_OK) {
+        return status;
+    }
 
     self->id.iface_id                     = ucs_generate_uuid((uintptr_t)self);
     self->id.magic = UCT_GAUDI_IFACE_ADDR_MAGIC;

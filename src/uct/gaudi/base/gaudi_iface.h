@@ -53,6 +53,8 @@ int          uct_gaudi_iface_is_reachable(const uct_iface_h tl_iface,
                                           const uct_device_addr_t *dev_addr,
                                           const uct_iface_addr_t *iface_addr);
 
+ucs_status_t uct_gaudi_base_check_device_name(const uct_iface_params_t *params);
+
 ucs_status_t uct_gaudi_base_iface_event_fd_get(uct_iface_h tl_iface, int *fd_p);
 
 UCS_CLASS_INIT_FUNC(uct_gaudi_iface_t, uct_iface_ops_t *tl_ops,
