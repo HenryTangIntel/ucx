@@ -268,10 +268,10 @@ int main() {
     printf("Found %u UCT components:\n", num_components);
     for (unsigned i = 0; i < num_components; i++) {
         printf("Component[%u]: %s\n", i, components[i]->name);
-        if (strcmp(components[i]->name, "gaudi") == 0) {
+        if (strcmp(components[i]->name, "gaudi_cpy") == 0) {
             found_gaudi = 1;
             /* Test opening the MD and memory operations */
-            test_open_md(components[i], "gaudi");
+            test_open_md(components[i], "gaudi_cpy");
         }
     }
 
