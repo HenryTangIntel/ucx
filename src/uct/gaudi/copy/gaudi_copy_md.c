@@ -402,14 +402,7 @@ UCS_PROFILE_FUNC(ucs_status_t, uct_gaudi_copy_md_detect_memory_type,
 
 #ifdef HAVE_HLTHUNK_H
 
-/**
- * Export Gaudi device memory as DMA-BUF file descriptor
- * 
- * @param gaudi_md    Gaudi memory domain
- * @param gaudi_memh  Gaudi memory handle containing device memory
- * @return DMA-BUF file descriptor on success, -1 on failure
- */
-static int uct_gaudi_export_dmabuf(uct_gaudi_md_t *gaudi_md, 
+__attribute__((visibility("default")))ct_gaudi_export_dmabuf(uct_gaudi_md_t *gaudi_md, 
                                    uct_gaudi_mem_t *gaudi_memh)
 {
     int dmabuf_fd = -1;

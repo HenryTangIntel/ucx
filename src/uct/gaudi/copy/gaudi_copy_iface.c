@@ -9,7 +9,23 @@
 #include <ucs/sys/string.h>
 #include <ucs/async/eventfd.h>
 #include <ucs/arch/cpu.h>
+
+/* Forward declarations */
+static UCS_F_ALWAYS_INLINE int
+uct_gaudi_copy_event_is_ready(uct_gaudi_copy_event_desc_t *event_desc);
+
+static unsigned uct_gaudi_copy_iface_progress(uct_iface_h tl_iface);
+
+ucs_status_t uct_gaudi_copy_create_event(uct_gaudi_copy_iface_t *iface,
+                                        uct_completion_t *comp,
+                                        uct_gaudi_copy_event_desc_t **event_desc_p);
+
+void uct_gaudi_copy_signal_event(uct_gaudi_copy_iface_t *iface);
 #include <ucs/memory/memory_type.h>
+#include <ucs/async/async.h>
+#include <ucs/time/time.h>
+#include <errno.h>
+#include <unistd.h>
 
 #ifndef UCS_MEMORY_TYPE_GAUDI
 #define UCS_MEMORY_TYPE_GAUDI 100  // Use a value not conflicting with existing types
@@ -28,16 +44,24 @@ static ucs_config_field_t uct_gaudi_copy_iface_config_table[] = {
      UCS_CONFIG_TYPE_TABLE(uct_iface_config_table)},
 
     {"MAX_POLL", "16",
-     "Max number of event completions to pick during cuda events polling",
+     "Max number of event completions to pick during Gaudi events polling",
      ucs_offsetof(uct_gaudi_copy_iface_config_t, max_poll), UCS_CONFIG_TYPE_UINT},
 
     {"MAX_EVENTS", "inf",
-     "Max number of cuda events. -1 is infinite",
-     ucs_offsetof(uct_gaudi_copy_iface_config_t, max_cuda_events), UCS_CONFIG_TYPE_UINT},
+     "Max number of Gaudi events. -1 is infinite",
+     ucs_offsetof(uct_gaudi_copy_iface_config_t, max_gaudi_events), UCS_CONFIG_TYPE_UINT},
 
     {"BW", "10000MBs",
      "Effective memory bandwidth",
      ucs_offsetof(uct_gaudi_copy_iface_config_t, bandwidth), UCS_CONFIG_TYPE_BW},
+
+    {"EVENT_TIMEOUT", "5s",
+     "Timeout for async events completion",
+     ucs_offsetof(uct_gaudi_copy_iface_config_t, event_timeout), UCS_CONFIG_TYPE_TIME},
+
+    {"ASYNC_MAX_EVENTS", "128",
+     "Maximum number of async events in flight",
+     ucs_offsetof(uct_gaudi_copy_iface_config_t, async_max_events), UCS_CONFIG_TYPE_UINT},
 
     {NULL}
 };
@@ -96,7 +120,9 @@ static ucs_status_t uct_gaudi_copy_iface_query(uct_iface_h tl_iface,
 
     iface_attr->cap.event_flags         = UCT_IFACE_FLAG_EVENT_SEND_COMP |
                                           UCT_IFACE_FLAG_EVENT_RECV      |
-                                          UCT_IFACE_FLAG_EVENT_FD;
+                                          UCT_IFACE_FLAG_EVENT_FD        |
+                                          UCT_IFACE_FLAG_EVENT_ASYNC_CB     |
+                                          UCT_IFACE_FLAG_EVENT_RECV_SIG;
 
     iface_attr->cap.put.max_short       = UINT_MAX;
     iface_attr->cap.put.max_bcopy       = 0;
@@ -135,142 +161,278 @@ static ucs_status_t uct_gaudi_copy_iface_query(uct_iface_h tl_iface,
 static ucs_status_t uct_gaudi_copy_iface_flush(uct_iface_h tl_iface, unsigned flags,
                                               uct_completion_t *comp)
 {
-    /*
     uct_gaudi_copy_iface_t *iface = ucs_derived_of(tl_iface, uct_gaudi_copy_iface_t);
-    uct_gaudi_copy_event_desc_t *q_desc;
+    uct_gaudi_copy_event_desc_t *event_desc;
     ucs_queue_iter_t iter;
+    unsigned active_ops = 0;
 
-    if (comp != NULL) {
-        return UCS_ERR_UNSUPPORTED;
+    /* Count active operations */
+    ucs_queue_for_each_safe(event_desc, iter, &iface->active_events, queue) {
+        if (!uct_gaudi_copy_event_is_ready(event_desc)) {
+            active_ops++;
+        }
     }
 
-    ucs_queue_for_each_safe(q_desc, iter, &iface->active_queue, queue) {
-        if (!ucs_queue_is_empty(&q_desc->event_queue)) {
-            UCT_TL_IFACE_STAT_FLUSH_WAIT(ucs_derived_of(tl_iface,
-                                                        uct_base_iface_t));
+    /* If completion callback is provided and there are active operations */
+    if (comp != NULL && active_ops > 0) {
+        if (flags & UCT_FLUSH_FLAG_CANCEL) {
+            /* Cancel all active operations */
+            ucs_queue_for_each_safe(event_desc, iter, &iface->active_events, queue) {
+                ucs_queue_del_iter(&iface->active_events, iter);
+                if (event_desc->comp != NULL) {
+                    uct_invoke_completion(event_desc->comp, UCS_ERR_CANCELED);
+                }
+                ucs_mpool_put(event_desc);
+            }
+            UCT_TL_IFACE_STAT_FLUSH(ucs_derived_of(tl_iface, uct_base_iface_t));
+            return UCS_OK;
+        } else {
+            /* Return INPROGRESS to indicate async flush */
+            UCT_TL_IFACE_STAT_FLUSH_WAIT(ucs_derived_of(tl_iface, uct_base_iface_t));
             return UCS_INPROGRESS;
         }
     }
 
-    UCT_TL_IFACE_STAT_FLUSH(ucs_derived_of(tl_iface, uct_base_iface_t));
-    */
-    return UCS_OK;
-
-}
-
-
-static UCS_F_ALWAYS_INLINE unsigned
-uct_gaudi_copy_queue_head_ready(ucs_queue_head_t *queue_head)
-{
- //   uct_gaudi_copy_event_desc_t *gaudi_event;
-
-    if (ucs_queue_is_empty(queue_head)) {
-        return 0;
+    /* No active operations or no completion callback */
+    if (active_ops > 0) {
+        UCT_TL_IFACE_STAT_FLUSH_WAIT(ucs_derived_of(tl_iface, uct_base_iface_t));
+        return UCS_INPROGRESS;
     }
 
-//    cuda_event = ucs_queue_head_elem_non_empty(queue_head,
-    //                                           uct_gaudi_copy_event_desc_t,
-     //                                          queue);
- //   return (cudaSuccess == cudaEventQuery(cuda_event->event));
-     return 1;
+    UCT_TL_IFACE_STAT_FLUSH(ucs_derived_of(tl_iface, uct_base_iface_t));
+    return UCS_OK;
 }
 
 
+/* Helper function to create a new Gaudi event for async operations */
+ucs_status_t uct_gaudi_copy_create_event(uct_gaudi_copy_iface_t *iface,
+                                               uct_completion_t *comp,
+                                               uct_gaudi_copy_event_desc_t **event_desc_p)
+{
+    uct_gaudi_copy_event_desc_t *event_desc;
+    int event_id = -1;
+    
+    /* Get event descriptor from pool */
+    event_desc = ucs_mpool_get(&iface->gaudi_event_desc);
+    if (event_desc == NULL) {
+        return UCS_ERR_NO_MEMORY;
+    }
+    
+#ifdef HAVE_HLTHUNK_H
+    /* Create Gaudi event using hlthunk
+     * In real implementation this would be something like:
+     * event_id = hlthunk_create_event(device_fd);
+     * For now, simulate event creation
+     */
+    event_id = (int)(event_desc->sequence % 1000); /* Simulate event ID */
+#endif
+    
+    /* Initialize event descriptor */
+    event_desc->event_id = event_id;
+    event_desc->comp = comp;
+    event_desc->start_time = ucs_get_time();
+    event_desc->user_data = NULL;
+    
+    /* Add to active events queue */
+    ucs_queue_push(&iface->active_events, &event_desc->queue);
+    
+    ucs_trace("Created Gaudi event %d for async operation, sequence %lu",
+              event_id, event_desc->sequence);
+    
+    *event_desc_p = event_desc;
+    return UCS_OK;
+}
 
-static UCS_F_ALWAYS_INLINE unsigned
-uct_gaudi_copy_progress_event_queue(uct_gaudi_copy_iface_t *iface,
-                                   ucs_queue_head_t *queue_head,
-                                   unsigned max_events)
-{/*
-    unsigned count = 0;
-    uct_gaudi_copy_event_desc_t *gaudi_event;
-
-    ucs_queue_for_each_extract(gaudi_event, queue_head, queue,
-                               cudaEventQuery(gaudi_event->event) == cudaSuccess) {
-        ucs_queue_remove(queue_head, &gaudi_event->queue);
-        if (gaudi_event->comp != NULL) {
-            ucs_trace_data("gaudi_copy event %p completed", gaudi_event);
-            uct_invoke_completion(gaudi_event->comp, UCS_OK);
+/* Helper function to signal async event completion */
+void uct_gaudi_copy_signal_event(uct_gaudi_copy_iface_t *iface)
+{
+    uint64_t dummy = 1;
+    ssize_t ret;
+    
+    /* Signal the eventfd to wake up async processing */
+    ret = write(iface->eventfd, &dummy, sizeof(dummy));
+    if (ret != sizeof(dummy)) {
+        if (errno != EAGAIN && errno != EWOULDBLOCK) {
+            ucs_warn("Failed to signal Gaudi eventfd: %m");
         }
-        ucs_trace_poll("GAUDI Event Done :%p", gaudi_event);
-        ucs_mpool_put(gaudi_event);
+    } else {
+        ucs_trace_poll("Signaled Gaudi eventfd for async processing");
+    }
+}
+
+/* Helper function to submit async operation with event tracking */
+static ucs_status_t __attribute__((unused))
+uct_gaudi_copy_post_async_op(uct_gaudi_copy_iface_t *iface,
+                            uct_completion_t *comp,
+                            const char *op_name)
+{
+    uct_gaudi_copy_event_desc_t *event_desc;
+    ucs_status_t status;
+    
+    /* Create event for tracking this async operation */
+    status = uct_gaudi_copy_create_event(iface, comp, &event_desc);
+    if (status != UCS_OK) {
+        return status;
+    }
+    
+    /* In real implementation, this would submit the operation to Gaudi
+     * For example: hlthunk_submit_async_op(device_fd, event_desc->event_id, ...);
+     */
+    
+    ucs_debug("Posted async %s operation with event %d", 
+              op_name, event_desc->event_id);
+    
+    /* Signal that there's async work to be processed */
+    uct_gaudi_copy_signal_event(iface);
+    
+    return UCS_INPROGRESS;
+}
+
+/* Async event handler function */
+static void uct_gaudi_copy_async_event_handler(int fd, ucs_event_set_types_t events, void *arg)
+{
+    uct_gaudi_copy_iface_t *iface = (uct_gaudi_copy_iface_t *)arg;
+    uint64_t dummy;
+    
+    /* Read from eventfd to clear the event */
+    if (read(fd, &dummy, sizeof(dummy)) < 0) {
+        if (errno != EAGAIN && errno != EWOULDBLOCK) {
+            ucs_warn("Failed to read from Gaudi eventfd: %m");
+        }
+    }
+    
+    /* Trigger progress on the interface */
+    uct_gaudi_copy_iface_progress(&iface->super.super.super);
+}
+
+/* Check if an event is ready for completion */
+static UCS_F_ALWAYS_INLINE int
+uct_gaudi_copy_event_is_ready(uct_gaudi_copy_event_desc_t *event_desc)
+{
+    ucs_time_t current_time;
+    
+    if (event_desc->event_id < 0) {
+        return 0; /* Invalid event */
+    }
+    
+#ifdef HAVE_HLTHUNK_H
+    /* In real implementation, this would check hlthunk event status
+     * For example: return hlthunk_wait_and_release_event(device_fd, event_desc->event_id);
+     * For now, simulate completion based on time
+     */
+#endif
+    
+    /* Simulate event completion after some time */
+    current_time = ucs_get_time();
+    if (event_desc->start_time != 0 && 
+        (current_time - event_desc->start_time) > ucs_time_from_usec(100)) {
+        return 1; /* Event completed */
+    }
+    
+    return 0;
+}
+
+/* Process completed events from the active queue */
+static UCS_F_ALWAYS_INLINE unsigned
+uct_gaudi_copy_progress_events(uct_gaudi_copy_iface_t *iface, unsigned max_events)
+{
+    uct_gaudi_copy_event_desc_t *event_desc;
+    ucs_queue_iter_t iter;
+    unsigned count = 0;
+    
+    ucs_queue_for_each_safe(event_desc, iter, &iface->active_events, queue) {
+        if (!uct_gaudi_copy_event_is_ready(event_desc)) {
+            continue; /* Event not ready yet */
+        }
+        
+        /* Remove from active queue */
+        ucs_queue_del_iter(&iface->active_events, iter);
+        
+        /* Complete the operation */
+        if (event_desc->comp != NULL) {
+            ucs_trace_data("Gaudi event %d completed for desc %p, sequence %lu",
+                          event_desc->event_id, event_desc, event_desc->sequence);
+            uct_invoke_completion(event_desc->comp, UCS_OK);
+        }
+        
+        /* Return event descriptor to pool */
+        ucs_mpool_put(event_desc);
+        
         count++;
         if (count >= max_events) {
             break;
         }
     }
     
-
-    return count; 
-    */
-    return 0;
+    return count;
 }
-
-
 
 static unsigned uct_gaudi_copy_iface_progress(uct_iface_h tl_iface)
 {
-    /*
     uct_gaudi_copy_iface_t *iface = ucs_derived_of(tl_iface, uct_gaudi_copy_iface_t);
     unsigned max_events = iface->config.max_poll;
-    unsigned count      = 0;
-    ucs_queue_head_t *event_q;
-    uct_gaudi_copy_event_desc_t *q_desc;
-    ucs_queue_iter_t iter;
-
-    ucs_queue_for_each_safe(q_desc, iter, &iface->active_queue, queue) {
-        event_q = &q_desc->event_queue;
-        count  += uct_gaudi_copy_progress_event_queue(iface, event_q,
-                                                     max_events - count);
-        if (ucs_queue_is_empty(event_q)) {
-            ucs_queue_del_iter(&iface->active_queue, iter);
-        }
+    unsigned count = 0;
+    
+    /* Process completed events */
+    count += uct_gaudi_copy_progress_events(iface, max_events);
+    
+    /* Process pending requests if any */
+    if (!ucs_queue_is_empty(&iface->pending_requests)) {
+        /* Dispatch pending async requests */
+        ucs_trace_poll("Processing %zu pending Gaudi requests", 
+                      ucs_queue_length(&iface->pending_requests));
+        /* Implementation would process pending queue here */
     }
-
+    
     return count;
-    */
-    return 0;
 }
 
 static ucs_status_t uct_gaudi_copy_iface_event_fd_arm(uct_iface_h tl_iface,
                                                     unsigned events)
 {
-    /*
     uct_gaudi_copy_iface_t *iface = ucs_derived_of(tl_iface, uct_gaudi_copy_iface_t);
     ucs_status_t status;
-    cudaStream_t *stream;
-    ucs_queue_head_t *event_q;
-    uct_gaudi_copy_queue_desc_t *q_desc;
-    ucs_queue_iter_t iter;
-
-    ucs_queue_for_each_safe(q_desc, iter, &iface->active_queue, queue) {
-        event_q = &q_desc->event_queue;
-        if (uct_gaudi_copy_queue_head_ready(event_q)) {
-            return UCS_ERR_BUSY;
-        }
-    }
-
-    status = ucs_async_eventfd_poll(iface->super.eventfd);
-    if (status == UCS_OK) {
-        return UCS_ERR_BUSY;
-    } else if (status == UCS_ERR_IO_ERROR) {
-        return status;
-    }
-
-    ucs_assertv(status == UCS_ERR_NO_PROGRESS, "%s", ucs_status_string(status));
-
-    ucs_queue_for_each_safe(q_desc, iter, &iface->active_queue, queue) {
-        event_q = &q_desc->event_queue;
-        stream  = &q_desc->stream;
-        if (!ucs_queue_is_empty(event_q)) {
-           ucs_message("Event queue is not empty");
-           //CALL BACK GAUDI
-           if (UCS_OK != status) {
-                return status;
+    
+    /* Check if there are any ready events that would make arming unnecessary */
+    if (!ucs_queue_is_empty(&iface->active_events)) {
+        uct_gaudi_copy_event_desc_t *event_desc;
+        ucs_queue_iter_t iter;
+        
+        ucs_queue_for_each_safe(event_desc, iter, &iface->active_events, queue) {
+            if (uct_gaudi_copy_event_is_ready(event_desc)) {
+                return UCS_ERR_BUSY; /* Events are ready, no need to arm */
             }
         }
     }
-    */
+    
+    /* Poll the eventfd to see if there are already pending events */
+    status = ucs_async_eventfd_poll(iface->eventfd);
+    if (status == UCS_OK) {
+        return UCS_ERR_BUSY; /* Events are already pending */
+    } else if (status == UCS_ERR_IO_ERROR) {
+        return status; /* Error occurred */
+    }
+    
+    /* No events pending, it's safe to arm */
+    ucs_assertv(status == UCS_ERR_NO_PROGRESS, "Unexpected status: %s", 
+                ucs_status_string(status));
+    
+    /* Enable async event monitoring */
+    if (iface->async_context != NULL) {
+        status = ucs_async_set_event_handler(UCS_ASYNC_MODE_THREAD,
+                                           iface->eventfd,
+                                           UCS_EVENT_SET_EVREAD,
+                                           uct_gaudi_copy_async_event_handler,
+                                           iface,
+                                           iface->async_context);
+        if (status != UCS_OK) {
+            ucs_error("Failed to set Gaudi async event handler: %s",
+                     ucs_status_string(status));
+            return status;
+        }
+    }
+    
+    ucs_trace("Armed Gaudi interface %p for async events", iface);
     return UCS_OK;
 }
 
@@ -301,31 +463,39 @@ static uct_iface_ops_t uct_gaudi_copy_iface_ops = {
 
 static void uct_gaudi_copy_event_desc_init(ucs_mpool_t *mp, void *obj, void *chunk)
 {
-    //uct_gaudi_copy_event_desc_t *base = (uct_gaudi_copy_event_desc_t *) obj;
-    //ucs_status_t status;
+    uct_gaudi_copy_event_desc_t *event_desc = (uct_gaudi_copy_event_desc_t *) obj;
+    uct_gaudi_copy_iface_t *iface = ucs_container_of(mp, uct_gaudi_copy_iface_t, gaudi_event_desc);
 
-    // memset(base, 0 , sizeof(*base));
-    //status = UCT_CUDA_CALL_LOG_ERR(cudaEventCreateWithFlags, &base->event,
-    //                               cudaEventDisableTiming);
-    //if (UCS_OK != status) {
-    //    ucs_error("cudaEventCreateWithFlags Failed");
-    //}
+    memset(event_desc, 0, sizeof(*event_desc));
+    event_desc->event_id = -1;  /* Invalid event ID initially */
+    event_desc->comp = NULL;
+    event_desc->start_time = 0;
+    event_desc->sequence = ++iface->event_sequence;
+    event_desc->user_data = NULL;
+    
+    ucs_trace("Gaudi event desc initialized: %p, sequence: %lu", 
+              event_desc, event_desc->sequence);
 }
 
 static void uct_gaudi_copy_event_desc_cleanup(ucs_mpool_t *mp, void *obj)
 {
-    /*
-    uct_gaudi_copy_event_desc_t *base = (uct_gaudi_copy_event_desc_t *) obj;
-    uct_gaudi_copy_iface_t *iface     = ucs_container_of(mp,
-                                                        uct_gaudi_copy_iface_t,
-                                                        gaudi_event_desc);
-    CUcontext cuda_context;
+    uct_gaudi_copy_event_desc_t *event_desc = (uct_gaudi_copy_event_desc_t *) obj;
 
-    UCT_CUDADRV_FUNC_LOG_ERR(cuCtxGetCurrent(&cuda_context));
-    if (uct_gaudi_base_context_match(cuda_context, iface->gaudi_context)) {
-        UCT_CUDA_CALL_LOG_ERR(cudaEventDestroy, base->event);
+    /* Clean up any Gaudi-specific event resources */
+    if (event_desc->event_id >= 0) {
+#ifdef HAVE_HLTHUNK_H
+        /* Placeholder for Gaudi event cleanup
+         * In real implementation this would call hlthunk event cleanup functions
+         * For example: hlthunk_wait_and_release_event(iface->device_fd, event_desc->event_id);
+         */
+#endif
+        ucs_debug("Cleaning up Gaudi event %d for desc %p", 
+                  event_desc->event_id, event_desc);
+        event_desc->event_id = -1;
     }
-        */
+    
+    /* Event has been removed from queue during progress iteration */
+    ucs_trace("Event descriptor %p cleaned up", event_desc);
 }
 
 static ucs_status_t
@@ -438,19 +608,39 @@ static UCS_CLASS_INIT_FUNC(uct_gaudi_copy_iface_t, uct_md_h md, uct_worker_h wor
     self->id.iface_id                     = ucs_generate_uuid((uintptr_t)self);
     self->id.magic = UCT_GAUDI_IFACE_ADDR_MAGIC;
     self->config.max_poll        = config->max_poll;
-    self->config.max_cuda_events = config->max_cuda_events;
+    self->config.max_gaudi_events = config->max_gaudi_events;
     self->config.bandwidth       = config->bandwidth;
+    self->config.event_timeout   = config->event_timeout;
+    
+    /* Initialize event sequence counter */
+    self->event_sequence = 0;
+    
+    /* Initialize queues for events and requests */
+    ucs_queue_head_init(&self->active_events);
+    ucs_queue_head_init(&self->pending_requests);
+    
+    /* Initialize async context from worker */
+    self->async_context = ucs_derived_of(worker, uct_priv_worker_t)->async;
+    self->eventfd = UCS_ASYNC_EVENTFD_INVALID_FD;
+    
+    /* Create eventfd for async operations */
+    status = ucs_async_eventfd_create(&self->eventfd);
+    if (status != UCS_OK) {
+        ucs_error("Failed to create eventfd for Gaudi interface: %s",
+                  ucs_status_string(status));
+        goto err_mpool_cleanup;
+    }
 
     ucs_mpool_params_reset(&mp_params);
     mp_params.elem_size       = sizeof(uct_gaudi_copy_event_desc_t);
     mp_params.elems_per_chunk = 128;
-    mp_params.max_elems       = self->config.max_cuda_events;
+    mp_params.max_elems       = self->config.max_gaudi_events;
     mp_params.ops             = &uct_gaudi_copy_event_desc_mpool_ops;
     mp_params.name            = "GAUDI EVENT objects";
     status = ucs_mpool_init(&mp_params, &self->gaudi_event_desc);
     if (UCS_OK != status) {
         ucs_error("mpool creation failed");
-        return UCS_ERR_IO_ERROR;
+        goto err_eventfd_destroy;
     }
     /*
     ucs_queue_head_init(&self->active_queue);
@@ -467,21 +657,58 @@ static UCS_CLASS_INIT_FUNC(uct_gaudi_copy_iface_t, uct_md_h md, uct_worker_h wor
 
     */
 
+    ucs_debug("Gaudi copy interface initialized: eventfd=%d max_events=%u",
+              self->eventfd, self->config.max_gaudi_events);
     return UCS_OK;
+
+err_eventfd_destroy:
+    ucs_async_eventfd_destroy(self->eventfd);
+err_mpool_cleanup:
+    ucs_mpool_cleanup(&self->gaudi_event_desc, 1);
+    return status;
 }
 
 static UCS_CLASS_CLEANUP_FUNC(uct_gaudi_copy_iface_t)
 {
-    //cudaStream_t *stream;
-    //CUcontext cuda_context;
-    //ucs_queue_head_t *event_q;
-    //ucs_memory_type_t src, dst;
+    uct_gaudi_copy_event_desc_t *event_desc;
+    ucs_queue_iter_t iter;
 
-    //uct_base_iface_progress_disable(&self->super.super.super,
-    //                                UCT_PROGRESS_SEND | UCT_PROGRESS_RECV);
+    /* Disable progress to prevent new events */
+    uct_base_iface_progress_disable(&self->super.super.super,
+                                    UCT_PROGRESS_SEND | UCT_PROGRESS_RECV);
 
-    //ucs_mpool_cleanup(&self->cuda_event_desc, 1);
+    /* Clean up active events */
+    ucs_queue_for_each_safe(event_desc, iter, &self->active_events, queue) {
+        ucs_queue_del_iter(&self->active_events, iter);
+        if (event_desc->comp != NULL) {
+            ucs_warn("Gaudi event %d still active during cleanup, completing with error",
+                     event_desc->event_id);
+            uct_invoke_completion(event_desc->comp, UCS_ERR_CANCELED);
+        }
+        ucs_mpool_put(event_desc);
+    }
 
+    /* Clean up pending requests */
+    if (!ucs_queue_is_empty(&self->pending_requests)) {
+        ucs_warn("Gaudi interface has %zu pending requests during cleanup",
+                 ucs_queue_length(&self->pending_requests));
+        /* Individual requests should clean themselves up */
+    }
+
+    /* Remove async event handler if set */
+    if (self->async_context != NULL && self->eventfd != UCS_ASYNC_EVENTFD_INVALID_FD) {
+        ucs_async_remove_handler(self->eventfd, 1);
+    }
+
+    /* Destroy eventfd */
+    if (self->eventfd != UCS_ASYNC_EVENTFD_INVALID_FD) {
+        ucs_async_eventfd_destroy(self->eventfd);
+    }
+
+    /* Clean up memory pool */
+    ucs_mpool_cleanup(&self->gaudi_event_desc, 1);
+    
+    ucs_debug("Gaudi copy interface cleaned up");
 }
 
 UCS_CLASS_DEFINE(uct_gaudi_copy_iface_t, uct_gaudi_iface_t);

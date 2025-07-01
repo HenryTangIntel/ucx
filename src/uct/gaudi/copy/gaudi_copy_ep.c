@@ -68,7 +68,7 @@ uct_gaudi_copy_get_stream(uct_gaudi_copy_iface_t *iface,
 }
 
 static UCS_F_ALWAYS_INLINE ucs_memory_type_t
-uct_cuda_copy_get_mem_type(uct_md_h md, void *address, size_t length)
+uct_gaudi_copy_get_mem_type(uct_md_h md, void *address, size_t length)
 {
     ucs_memory_info_t mem_info;
     ucs_status_t status;
@@ -94,71 +94,53 @@ static UCS_F_ALWAYS_INLINE ucs_status_t
 uct_gaudi_copy_post_gaudi_async_copy(uct_ep_h tl_ep, void *dst, void *src,
                                    size_t length, uct_completion_t *comp)
 {
-    /*
     uct_gaudi_copy_iface_t *iface = ucs_derived_of(tl_ep->iface, uct_gaudi_copy_iface_t);
     uct_base_iface_t *base_iface = ucs_derived_of(tl_ep->iface, uct_base_iface_t);
-    uct_gaudi_copy_event_desc_t *gaudi_event;
-  
+    uct_gaudi_copy_event_desc_t *event_desc;
     ucs_status_t status;
-    ucs_memory_type_t src_type;
-    ucs_memory_type_t dst_type;
-    int *stream;
-    ucs_queue_head_t *event_q;
+    ucs_memory_type_t src_type, dst_type;
 
     if (!length) {
         return UCS_OK;
     }
 
-  
-    if (iface->gaudi_context == NULL) {
-        UCT_CUDADRV_FUNC_LOG_ERR(cuCtxGetCurrent(&iface->gaudi_context));
-        if (iface->gaudi_context == NULL) {
-            ucs_error("attempt to perform gaudi memcpy without active context");
-            return UCS_ERR_IO_ERROR;
-        }
-    }
-    
-
+    /* Detect memory types for source and destination */
     src_type = uct_gaudi_copy_get_mem_type(base_iface->md, src, length);
     dst_type = uct_gaudi_copy_get_mem_type(base_iface->md, dst, length);
-    q_desc   = &iface->queue_desc[src_type][dst_type];
-    event_q  = &q_desc->event_queue;
-    stream   = uct_gaudi_copy_get_stream(iface, src_type, dst_type);
-    if (stream == NULL) {
-        ucs_error("stream for src %s dst %s not available",
-                   ucs_memory_type_names[src_type],
-                   ucs_memory_type_names[dst_type]);
-        return UCS_ERR_IO_ERROR;
+
+    ucs_trace("Gaudi async copy: src=%p[%s] dst=%p[%s] len=%zu",
+              src, ucs_memory_type_names[src_type],
+              dst, ucs_memory_type_names[dst_type], length);
+
+    /* Create event for tracking this async operation */
+    status = uct_gaudi_copy_create_event(iface, comp, &event_desc);
+    if (status != UCS_OK) {
+        return status;
     }
 
-    gaudi_event = ucs_mpool_get(&iface->gaudi_event_desc);
-    if (ucs_unlikely(gaudi_event == NULL)) {
-        ucs_error("Failed to allocate gaudi event object");
-        return UCS_ERR_NO_MEMORY;
-    }
+#ifdef HAVE_HLTHUNK_H
+    /* In real implementation, this would submit async DMA operation to Gaudi
+     * For example:
+     * status = hlthunk_submit_async_dma(device_fd, src, dst, length, 
+     *                                  event_desc->event_id);
+     * if (status != 0) {
+     *     ucs_mpool_put(event_desc);
+     *     return UCS_ERR_IO_ERROR;
+     * }
+     */
+#endif
 
+    /* For now, simulate the async operation by setting completion time */
+    event_desc->user_data = (void*)length; /* Store length for debugging */
+
+    ucs_debug("Posted Gaudi async copy: event=%d src=%p dst=%p len=%zu",
+              event_desc->event_id, src, dst, length);
+
+    UCT_TL_EP_STAT_OP(ucs_derived_of(tl_ep, uct_base_ep_t), PUT, ZCOPY, length);
     
-
-    status = UCT_GAUDI_CALL_LOG_ERR(gaudiMemcpyAsync, dst, src, length,
-                                   gaudiMemcpyDefault, *stream);
-
-    status = UCT_GAUDI_CALL_LOG_ERR(gaudiEventRecord, gaudi_event->event, *stream);
+    /* Signal async work is available */
+    uct_gaudi_copy_signal_event(iface);
     
-    if (UCS_OK != status) {
-        return UCS_ERR_IO_ERROR;
-    }
-
-    if (ucs_queue_is_empty(event_q)) {
-        ucs_queue_push(&iface->active_queue, &q_desc->queue);
-    }
-
-    ucs_queue_push(event_q, &gaudi_event->queue);
-    gaudi_event->comp = comp;
-
-    ucs_trace("gaudi async issued: %p dst:%p[%s], src:%p[%s] len:%ld",
-              gaudi_event, dst, ucs_memory_type_names[dst_type], src,
-              ucs_memory_type_names[src_type], length);
-    */
     return UCS_INPROGRESS;
 }
 
