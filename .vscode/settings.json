@@ -1,0 +1,16 @@
+{
+    "files.associations": {
+        "gaudimem.h": "c",
+        "config.h": "c",
+        "array": "cpp",
+        "string_view": "cpp",
+        "initializer_list": "cpp",
+        "utility": "cpp",
+        "uct.h": "c",
+        "gaudi_md.h": "c",
+        "uct_component.h": "c",
+        "ucp.h": "c",
+        "memory_type.h": "c",
+        "hlthunk.h": "c"
+    }
+}

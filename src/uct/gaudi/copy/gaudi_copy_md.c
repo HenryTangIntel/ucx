@@ -164,11 +164,14 @@ static ucs_status_t uct_gaudi_copy_mem_alloc(uct_md_h md, size_t *length_p,
         ucs_error("Failed to allocate Gaudi memory handle on host");
         return UCS_ERR_NO_MEMORY;
     }
-     gaudi_memh->vaddr = (void *)addr;
+
+    gaudi_memh->vaddr = (void *)addr; 
     gaudi_memh->size = *length_p;
     gaudi_memh->handle = handle;
     gaudi_memh->dev_addr = addr;
     gaudi_memh->dmabuf_fd = -1;
+    ucs_trace("Allocated Gaudi memory handle %p, size %zu, dev addr 0x%lx",
+              gaudi_memh, *length_p, gaudi_memh->dev_addr);
 
     /* Optionally export as DMA-BUF if flags indicate it */
     if (flags & UCT_MD_MEM_FLAG_FIXED) {
@@ -273,7 +276,7 @@ static ucs_status_t uct_gaudi_copy_mem_reg_internal(
     mem_hndl->vaddr    = address;
     mem_hndl->dev_addr = (uint64_t)dev_addr;
     mem_hndl->size     = length;
-    mem_hndl->handle   = 0;
+    //mem_hndl->handle   = 0;
     mem_hndl->dmabuf_fd = -1;
 
 #ifdef HAVE_HLTHUNK_H
@@ -398,6 +401,9 @@ static int uct_gaudi_export_dmabuf(uct_gaudi_md_t *gaudi_md,
      * Use hlthunk API to export device memory as DMA-BUF
      * This creates a file descriptor that can be shared with other devices like MLX NICs
      */
+    ucs_trace("To be exported with Gaudi memory handle %p, size %zu, dev addr 0x%lx",
+              gaudi_memh, gaudi_memh->size, gaudi_memh->dev_addr);
+
     dmabuf_fd = hlthunk_device_mapped_memory_export_dmabuf_fd(
         gaudi_md->hlthunk_fd, gaudi_memh->dev_addr, gaudi_memh->size, 
         0, (O_RDWR | O_CLOEXEC));
