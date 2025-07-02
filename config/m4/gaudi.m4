@@ -17,7 +17,9 @@ AS_IF([test "x$with_gaudi" = "xno"],
     [
     CPPFLAGS="$CPPFLAGS -I$with_gaudi/include/habanalabs"
     LDFLAGS="$LDFLAGS -L$with_gaudi/lib/habanalabs"
-    AC_CHECK_HEADER([hlthunk.h], [],
+    AC_CHECK_HEADER([hlthunk.h], [
+        AC_DEFINE([HAVE_HLTHUNK_H], [1], [Define if hlthunk.h header is available])
+    ],
         [AC_MSG_ERROR([Gaudi headers not found])])
     AC_CHECK_LIB([hl-thunk], [hlthunk_open], [
         gaudi_happy=yes

@@ -416,7 +416,7 @@ static int uct_gaudi_export_dmabuf(uct_gaudi_md_t *gaudi_md,
     return dmabuf_fd;
 }
 
-static ucs_status_t __attribute__((unused)) uct_gaudi_import_dmabuf(uct_gaudi_md_t *gaudi_md,
+static ucs_status_t uct_gaudi_import_dmabuf(uct_gaudi_md_t *gaudi_md,
                                            int dmabuf_fd, size_t offset,
                                            size_t size, uct_gaudi_mem_t *gaudi_memh)
 {
