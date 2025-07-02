@@ -12,6 +12,7 @@
 #include <ucm/util/sys.h>
 #include <ucs/sys/compiler.h>
 #include <ucs/sys/preprocessor.h>
+#include <ucs/memory/memory_type.h>
 #include <sys/mman.h>
 #include <unistd.h>
 #include <pthread.h>
@@ -20,8 +21,11 @@
 
 #if HAVE_GAUDI
 
-UCM_DEFINE_REPLACE_DLSYM_FUNC(hlthunk_device_memory_alloc, int , uint64_t , uint64_t , bool , bool)
-UCM_DEFINE_REPLACE_DLSYM_FUNC(hlthunk_device_memory_free, int, uint64_t )
+UCM_DEFINE_REPLACE_DLSYM_FUNC(hlthunk_device_memory_alloc, uint64_t, 0, int, uint64_t, uint64_t, bool, bool)
+UCM_DEFINE_REPLACE_DLSYM_FUNC(hlthunk_device_memory_free, int, -1, int, uint64_t)
+UCM_DEFINE_REPLACE_DLSYM_FUNC(hlthunk_device_memory_map, uint64_t, 0, int, uint64_t, uint64_t)
+UCM_DEFINE_REPLACE_DLSYM_FUNC(hlthunk_device_memory_unmap, int, -1, int, uint64_t)
+
 
 static UCS_F_ALWAYS_INLINE void
 ucm_dispatch_gaudi_mem_type_alloc(void *addr, size_t length, ucs_memory_type_t mem_type)
@@ -43,27 +47,69 @@ ucm_dispatch_gaudi_mem_type_free(void *addr, size_t length, ucs_memory_type_t me
     ucm_event_dispatch(UCM_EVENT_MEM_TYPE_FREE, &event);
 }
 
-
-int ucm_hlthunk_device_memory_alloc(int fd, uint64_t size, uint64_t page_size, bool contiguous, bool shared)
+static UCS_F_ALWAYS_INLINE void
+ucm_dispatch_gaudi_mem_type_map(void *addr, size_t length, ucs_memory_type_t mem_type)
 {
-    int ret;
+    ucm_event_t event;
+    event.vm_mapped.address = addr;
+    event.vm_mapped.size    = length;
+    /* Use VM_MAPPED event for memory mapping operations */
+    ucm_event_dispatch(UCM_EVENT_VM_MAPPED, &event);
+}
+
+
+
+
+uint64_t ucm_hlthunk_device_memory_alloc(int fd, uint64_t size, uint64_t page_size, bool contiguous, bool shared)
+{
+    uint64_t handle;
     ucm_event_enter();
-    ret = ucm_orig_hlthunk_device_memory_alloc(fd, size, page_size, contiguous, shared);
-    if (ret == 0 && handle) {
-        ucm_trace("ucm_hlthunk_device_memory_alloc(handle=%p size:%lu)", (void*)(uintptr_t)(*handle), size);
-        ucm_dispatch_gaudi_mem_type_alloc((void*)(uintptr_t)(*handle), size, UCS_MEMORY_TYPE_GAUDI_DEVICE);
+    handle = ucm_orig_hlthunk_device_memory_alloc(fd, size, page_size, contiguous, shared);
+    if (handle != 0) {
+        ucm_trace("ucm_hlthunk_device_memory_alloc(handle=0x%lx size:%lu)", handle, size);
+        ucm_dispatch_gaudi_mem_type_alloc((void*)(uintptr_t)handle, size, UCS_MEMORY_TYPE_GAUDI);
     }
     ucm_event_leave();
-    return ret;
+    return handle;
 }
 
 int ucm_hlthunk_device_memory_free(int fd, uint64_t handle)
 {
     int ret;
     ucm_event_enter();
-    ucm_trace("ucm_hlthunk_device_memory_free(handle=%lu)", handle);
-    ucm_dispatch_gaudi_mem_type_free((void *)(uintptr_t)handle, 0, UCS_MEMORY_TYPE_GAUDI_DEVICE);
+    ucm_trace("ucm_hlthunk_device_memory_free(handle=0x%lx)", handle);
+    ucm_dispatch_gaudi_mem_type_free((void *)(uintptr_t)handle, 0, UCS_MEMORY_TYPE_GAUDI);
     ret = ucm_orig_hlthunk_device_memory_free(fd, handle);
+    ucm_event_leave();
+    return ret;
+}
+
+
+uint64_t ucm_hlthunk_device_memory_map(int fd, uint64_t handle, uint64_t hint_addr)
+{
+    uint64_t mapped_addr;
+    ucm_event_enter();
+    ucm_trace("ucm_hlthunk_device_memory_map(fd=%d, handle=0x%lx, hint_addr=0x%lx)", fd, handle, hint_addr);
+    mapped_addr = ucm_orig_hlthunk_device_memory_map(fd, handle, hint_addr);
+    if (mapped_addr != 0) {
+        ucm_dispatch_gaudi_mem_type_map((void *)(uintptr_t)mapped_addr, 0, UCS_MEMORY_TYPE_GAUDI);
+    }
+    ucm_event_leave();
+    return mapped_addr;
+}
+
+int ucm_hlthunk_device_memory_unmap(int fd, uint64_t addr)
+{
+    int ret;
+    ucm_event_enter();
+    ucm_trace("ucm_hlthunk_device_memory_unmap(fd=%d, addr=0x%lx)", fd, addr);
+    if (addr != 0) {
+        ucm_event_t event;
+        event.vm_unmapped.address = (void *)(uintptr_t)addr;
+        event.vm_unmapped.size    = 0; /* Size unknown for unmap */
+        ucm_event_dispatch(UCM_EVENT_VM_UNMAPPED, &event);
+    }
+    ret = ucm_orig_hlthunk_device_memory_unmap(fd, addr);
     ucm_event_leave();
     return ret;
 }
@@ -71,6 +117,8 @@ int ucm_hlthunk_device_memory_free(int fd, uint64_t handle)
 static ucm_reloc_patch_t patches[] = {
     {"hlthunk_device_memory_alloc", ucm_hlthunk_device_memory_alloc},
     {"hlthunk_device_memory_free", ucm_hlthunk_device_memory_free},
+    {"hlthunk_device_memory_map", ucm_hlthunk_device_memory_map},
+    {"hlthunk_device_memory_unmap", ucm_hlthunk_device_memory_unmap},
     {NULL, NULL}
 };
 
@@ -81,7 +129,7 @@ static ucs_status_t ucm_gaudimem_install(int events)
     ucm_reloc_patch_t *patch;
     ucs_status_t status = UCS_OK;
 
-    if (!(events & (UCM_EVENT_MEM_TYPE_ALLOC | UCM_EVENT_MEM_TYPE_FREE))) {
+    if (!(events & (UCM_EVENT_MEM_TYPE_ALLOC | UCM_EVENT_MEM_TYPE_FREE | UCM_EVENT_VM_MAPPED | UCM_EVENT_VM_UNMAPPED))) {
         goto out;
     }
 

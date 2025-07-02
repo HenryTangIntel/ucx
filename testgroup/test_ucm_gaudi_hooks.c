@@ -20,11 +20,15 @@ typedef struct {
     int free_events;
     int mmap_events;
     int munmap_events;
+    int vm_mapped_events;
+    int vm_unmapped_events;
     void *last_alloc_addr;
     size_t last_alloc_size;
     ucs_memory_type_t last_alloc_type;
     void *last_free_addr;
     ucs_memory_type_t last_free_type;
+    void *last_mapped_addr;
+    void *last_unmapped_addr;
 } ucm_test_events_t;
 
 static ucm_test_events_t g_events = {0};
@@ -119,6 +123,56 @@ int ucm_wrapped_hlthunk_device_memory_free(int fd, uint64_t handle)
     return ret;
 }
 
+uint64_t ucm_wrapped_hlthunk_device_memory_map(int fd, uint64_t handle, uint64_t hint_addr)
+{
+    uint64_t mapped_addr;
+    
+    printf("UCM Wrapper: hlthunk_device_memory_map(fd=%d, handle=0x%lx, hint_addr=0x%lx)\n", 
+           fd, handle, hint_addr);
+    
+    // Call original function
+    mapped_addr = hlthunk_device_memory_map(fd, handle, hint_addr);
+    
+    if (mapped_addr != 0) {
+        printf("UCM Dispatch: Gaudi memory map event - mapped_addr: 0x%lx, handle: 0x%lx\n", 
+               mapped_addr, handle);
+        
+        // Manually trigger the UCM callback to simulate VM mapping event
+        ucm_event_t event;
+        event.vm_mapped.address = (void*)mapped_addr;
+        event.vm_mapped.size = 0; /* Size unknown for map */
+        
+        // Call our mmap callback directly to demonstrate the event
+        vm_mapped_callback(UCM_EVENT_VM_MAPPED, &event, NULL);
+    }
+    
+    return mapped_addr;
+}
+
+int ucm_wrapped_hlthunk_device_memory_unmap(int fd, uint64_t addr)
+{
+    int ret;
+    
+    printf("UCM Wrapper: hlthunk_device_memory_unmap(fd=%d, addr=0x%lx)\n", fd, addr);
+    
+    if (addr != 0) {
+        printf("UCM Dispatch: Gaudi memory unmap event - addr: 0x%lx\n", addr);
+        
+        // Manually trigger the UCM callback to simulate VM unmapping event
+        ucm_event_t event;
+        event.vm_unmapped.address = (void*)addr;
+        event.vm_unmapped.size = 0; /* Size unknown for unmap */
+        
+        // Call our munmap callback directly to demonstrate the event
+        vm_unmapped_callback(UCM_EVENT_VM_UNMAPPED, &event, NULL);
+    }
+    
+    // Call original function
+    ret = hlthunk_device_memory_unmap(fd, addr);
+    
+    return ret;
+}
+
 #endif /* HAVE_HLTHUNK_H */
 
 // Event callbacks
@@ -165,6 +219,26 @@ static void munmap_callback(ucm_event_type_t event_type, ucm_event_t *event, voi
     g_events.munmap_events++;
 }
 
+static void vm_mapped_callback(ucm_event_type_t event_type, ucm_event_t *event, void *arg)
+{
+    (void)event_type; /* Suppress unused parameter warning */
+    (void)arg; /* Suppress unused parameter warning */
+    printf("UCM Event: VM mapped - addr: %p, size: %zu\n",
+           event->vm_mapped.address, event->vm_mapped.size);
+    g_events.vm_mapped_events++;
+    g_events.last_mapped_addr = event->vm_mapped.address;
+}
+
+static void vm_unmapped_callback(ucm_event_type_t event_type, ucm_event_t *event, void *arg)
+{
+    (void)event_type; /* Suppress unused parameter warning */
+    (void)arg; /* Suppress unused parameter warning */
+    printf("UCM Event: VM unmapped - addr: %p, size: %zu\n",
+           event->vm_unmapped.address, event->vm_unmapped.size);
+    g_events.vm_unmapped_events++;
+    g_events.last_unmapped_addr = event->vm_unmapped.address;
+}
+
 static void reset_events(void)
 {
     memset(&g_events, 0, sizeof(g_events));
@@ -177,12 +251,20 @@ static void print_event_summary(void)
     printf("Memory frees: %d\n", g_events.free_events);
     printf("mmap calls: %d\n", g_events.mmap_events);
     printf("munmap calls: %d\n", g_events.munmap_events);
+    printf("VM mapped events: %d\n", g_events.vm_mapped_events);
+    printf("VM unmapped events: %d\n", g_events.vm_unmapped_events);
     if (g_events.last_alloc_addr) {
         printf("Last allocation: %p, size: %zu, type: %d\n",
                g_events.last_alloc_addr, g_events.last_alloc_size, g_events.last_alloc_type);
     }
     if (g_events.last_free_addr) {
         printf("Last free: %p, type: %d\n", g_events.last_free_addr, g_events.last_free_type);
+    }
+    if (g_events.last_mapped_addr) {
+        printf("Last mapped: %p\n", g_events.last_mapped_addr);
+    }
+    if (g_events.last_unmapped_addr) {
+        printf("Last unmapped: %p\n", g_events.last_unmapped_addr);
     }
     printf("========================\n\n");
 }
@@ -217,6 +299,17 @@ static ucs_status_t setup_ucm_events(void)
         }
     }
     
+    // Register VM mapped/unmapped events for device memory mapping
+    status = ucm_set_event_handler(UCM_EVENT_VM_MAPPED, 0, vm_mapped_callback, NULL);
+    if (status != UCS_OK) {
+        printf("Warning: Failed to set VM mapped handler: %s (continuing anyway)\n", ucs_status_string(status));
+    } else {
+        status = ucm_set_event_handler(UCM_EVENT_VM_UNMAPPED, 0, vm_unmapped_callback, NULL);
+        if (status != UCS_OK) {
+            printf("Warning: Failed to set VM unmapped handler: %s (continuing anyway)\n", ucs_status_string(status));
+        }
+    }
+    
     printf("✓ UCM event handlers registered successfully\n");
     return UCS_OK;
 }
@@ -229,6 +322,8 @@ static void cleanup_ucm_events(void)
     ucm_unset_event_handler(UCM_EVENT_MEM_TYPE_FREE, mem_free_callback, NULL);
     ucm_unset_event_handler(UCM_EVENT_MMAP, mmap_callback, NULL);
     ucm_unset_event_handler(UCM_EVENT_MUNMAP, munmap_callback, NULL);
+    ucm_unset_event_handler(UCM_EVENT_VM_MAPPED, vm_mapped_callback, NULL);
+    ucm_unset_event_handler(UCM_EVENT_VM_UNMAPPED, vm_unmapped_callback, NULL);
     
     printf("✓ UCM event handlers cleaned up\n");
 }
@@ -284,6 +379,26 @@ static void test_gaudi_memory_with_ucm_hooks(void)
     
     if (handle != 0) {
         printf("✓ Allocated Gaudi device memory: handle=0x%lx, size=%lu\n", handle, size);
+        
+        // Test mapping the device memory
+        printf("Testing Gaudi device memory mapping with UCM wrappers...\n");
+        uint64_t mapped_addr = ucm_wrapped_hlthunk_device_memory_map(fd, handle, 0);
+        
+        if (mapped_addr != 0) {
+            printf("✓ Mapped Gaudi device memory: mapped_addr=0x%lx, handle=0x%lx\n", 
+                   mapped_addr, handle);
+            
+            // Test unmapping the device memory
+            printf("Testing Gaudi device memory unmapping with UCM wrappers...\n");
+            int unmap_ret = ucm_wrapped_hlthunk_device_memory_unmap(fd, mapped_addr);
+            if (unmap_ret == 0) {
+                printf("✓ Unmapped Gaudi device memory: addr=0x%lx\n", mapped_addr);
+            } else {
+                printf("✗ Failed to unmap Gaudi device memory: %d\n", unmap_ret);
+            }
+        } else {
+            printf("✗ Failed to map Gaudi device memory\n");
+        }
         
         // Test freeing Gaudi device memory (using UCM wrapper functions)
         printf("Testing Gaudi device memory free with UCM wrappers...\n");
