@@ -55,6 +55,8 @@ int          uct_gaudi_iface_is_reachable(const uct_iface_h tl_iface,
 
 ucs_status_t uct_gaudi_base_check_device_name(const uct_iface_params_t *params);
 
+ucs_status_t uct_gaudi_base_get_sys_dev(uct_md_h md, ucs_sys_device_t *sys_dev_p);
+
 ucs_status_t uct_gaudi_base_iface_event_fd_get(uct_iface_h tl_iface, int *fd_p);
 
 UCS_CLASS_INIT_FUNC(uct_gaudi_iface_t, uct_iface_ops_t *tl_ops,

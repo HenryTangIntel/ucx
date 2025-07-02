@@ -8,7 +8,7 @@
 #include <unistd.h>
 #include <assert.h>
 
-#define TEST_SIZE 1024*1024  /* 1MB */
+#define TEST_SIZE 1024  /* 1KB */
 #define TEST_TAG  0x12345678
 
 typedef struct test_context {

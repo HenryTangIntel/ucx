@@ -19,19 +19,7 @@
 #include <hlthunk.h>
 #endif
 
-#define UCT_GAUDI_DEV_NAME_MAX_LEN 64
-#define UCT_GAUDI_MAX_DEVICES      32
-
 uct_component_t uct_gaudi_copy_component;
-
-#ifdef HAVE_HLTHUNK_H
-enum hlthunk_device_name devices[] = {
-        HLTHUNK_DEVICE_GAUDI3,
-        HLTHUNK_DEVICE_GAUDI2,
-        HLTHUNK_DEVICE_GAUDI,
-        HLTHUNK_DEVICE_DONT_CARE
-};
-#endif
 
 static const char *uct_gaudi_pref_loc[] = {
     [UCT_GAUDI_PREF_LOC_CPU]  = "cpu",
@@ -266,10 +254,10 @@ static ucs_status_t uct_gaudi_copy_mem_reg_internal(
         uct_md_h uct_md, void *address, size_t length,
         int export_dmabuf, uct_gaudi_mem_t *mem_hndl)
 {
-    void *dev_addr = NULL;
 #ifdef HAVE_HLTHUNK_H
     uct_gaudi_md_t *gaudi_md;
 #endif
+    void *dev_addr = NULL; /* Initialize dev_addr */
 
     ucs_assert((address != NULL) && (length != 0));
 
@@ -281,6 +269,14 @@ static ucs_status_t uct_gaudi_copy_mem_reg_internal(
 
 #ifdef HAVE_HLTHUNK_H
     gaudi_md = ucs_derived_of(uct_md, uct_gaudi_md_t);
+
+    /*
+     * In a real scenario, if 'address' is a host pointer, you would need to
+     * query the Gaudi driver to get the corresponding device address and handle.
+     * For simplicity and assuming 'address' might already be a device-mapped
+     * address or that the export function can handle it, we'll pass it directly.
+     * If 'address' is a host pointer, 'dev_addr' should be obtained from the driver.
+     */
     
     /* Try to export memory as DMA-BUF if requested and supported */
     if (export_dmabuf && gaudi_md->config.dmabuf_supported && 

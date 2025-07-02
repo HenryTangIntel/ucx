@@ -269,8 +269,8 @@ AS_IF([test "x$with_docs_only" = xyes],
      AC_ARG_ENABLE([debug-data],
                    AS_HELP_STRING([--enable-debug-data],
                                   [Enable collecting data to ease debugging, default: NO]),
-		   [],
-		   [enable_debug_data=no])
+               [],
+               [enable_debug_data=no])
      AS_IF([test "x$enable_debug_data" = xyes],
            [AC_DEFINE([ENABLE_DEBUG_DATA], [1], [Enable collecting data])
             AC_DEFINE([UCT_UD_EP_DEBUG_HOOKS], [1],
@@ -372,7 +372,6 @@ AC_CONFIG_FILES([
                  src/tools/profile/Makefile
                  test/apps/Makefile
                  test/apps/iodemo/Makefile
-                 test/apps/sockaddr/Makefile
                  test/apps/profiling/Makefile
                  test/mpi/Makefile
                  bindings/go/Makefile

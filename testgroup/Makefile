@@ -9,18 +9,21 @@ UCX_INSTALL_DIR = ../install
 INCLUDES = -I$(UCX_BUILD_DIR)/src -I$(UCX_BUILD_DIR)/config -I$(UCX_BUILD_DIR)
 BUILD_LIBDIR = -L$(UCX_BUILD_DIR)/src/uct/.libs -L$(UCX_BUILD_DIR)/src/ucs/.libs -L$(UCX_BUILD_DIR)/src/ucm/.libs
 INSTALL_LIBDIR = -L$(UCX_INSTALL_DIR)/lib
+
+# Ensure linker finds UCX libraries
+export LIBRARY_PATH := $(UCX_BUILD_DIR)/src/ucp/.libs:$(UCX_BUILD_DIR)/src/uct/.libs:$(UCX_BUILD_DIR)/src/ucs/.libs:$(UCX_BUILD_DIR)/src/ucm/.libs:$(LIBRARY_PATH)
 # Check for hl-thunk availability
 HLTHUNK_AVAILABLE := $(shell pkg-config --exists hl-thunk 2>/dev/null && echo "yes" || \
-                      test -f /usr/lib/libhl-thunk.so -o -f /usr/lib64/libhl-thunk.so -o \
-                           -f /usr/local/lib/libhl-thunk.so 2>/dev/null && echo "yes" || echo "no")
+					  test -f /usr/lib/libhl-thunk.so -o -f /usr/lib64/libhl-thunk.so -o \
+						   -f /usr/local/lib/libhl-thunk.so 2>/dev/null && echo "yes" || echo "no")
 
 # Conditional hl-thunk library
 ifeq ($(HLTHUNK_AVAILABLE),yes)
-    HLTHUNK_LIB = -lhl-thunk
-    HLTHUNK_FLAGS = -DHAVE_HLTHUNK_H=1
+	HLTHUNK_LIB = -lhl-thunk
+	HLTHUNK_FLAGS = -DHAVE_HLTHUNK_H=1
 else
-    HLTHUNK_LIB = 
-    HLTHUNK_FLAGS = 
+	HLTHUNK_LIB = 
+	HLTHUNK_FLAGS = 
 endif
 
 LIBS = -lucp -luct -lucs -lucm $(HLTHUNK_LIB)
@@ -29,27 +32,27 @@ INSTALL_RPATH = -Wl,-rpath,$(UCX_INSTALL_DIR)/lib
 
 # Source files for different test categories
 GAUDI_TESTS = gaudi_async_test.c \
-              gaudi_comm_test.c \
-              gaudi_dmabuf_mlx_test.c \
-              gaudi_query_md_resources_test.c \
-              gaudi_test_final.c \
-              gaudi_uct_direct_test.c \
-              gaudi_uct_simple_test.c \
-              gaudi_ucx_transport_test.c
+			  gaudi_comm_test.c \
+			  gaudi_dmabuf_mlx_test.c \
+			  gaudi_query_md_resources_test.c \
+			  gaudi_test_final.c \
+			  gaudi_uct_direct_test.c \
+			  gaudi_uct_simple_test.c \
+			  gaudi_ucx_transport_test.c
 
 DMABUF_TESTS = test_dmabuf_comprehensive.c \
-               test_dmabuf_simple.c \
-               test_gaudi_dmabuf.c \
-               test_gaudi_mlx_dmabuf.c \
-               test_ucx_dmabuf.c
+			   test_dmabuf_simple.c \
+			   test_gaudi_dmabuf.c \
+			   test_gaudi_mlx_dmabuf.c \
+			   test_ucx_dmabuf.c
 
 DETECTION_TESTS = test_gaudi_detection.c \
-                  ucx_gaudi_integration_test.c
+				  ucx_gaudi_integration_test.c
 
 VERIFICATION_TESTS = final_verification_test.c
 
 SIMPLE_TESTS = simple_test.c \
-               test_compile.c
+			   test_compile.c
 
 # All test source files
 ALL_TESTS = $(GAUDI_TESTS) $(DMABUF_TESTS) $(DETECTION_TESTS) $(VERIFICATION_TESTS) $(SIMPLE_TESTS)

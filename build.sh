@@ -28,6 +28,12 @@ fi
 # Build and run unittests (if available)
 make check || true
 
+# Build all testgroup executables
+if [ -d testgroup ]; then
+    echo "\nBuilding all testgroup executables..."
+    (cd testgroup && make -j"$(nproc)")
+fi
+
 echo "\nUCX build and install complete. Gaudi support enabled."
 echo "If you need to rebuild, just rerun this script."
 
