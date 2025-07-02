@@ -1,0 +1,21 @@
+CC = gcc
+CFLAGS = -g -Wall -O2
+UCX_PREFIX = /workspace/ucx/install
+INCLUDES = -I$(UCX_PREFIX)/include
+LDFLAGS = -L$(UCX_PREFIX)/lib -luct -lucs -lucp
+HLTHUNK_LDFLAGS = -lhlthunk
+
+# Default target
+all: test_gaudi_mlx_dmabuf
+
+test_gaudi_mlx_dmabuf: test_gaudi_mlx_dmabuf.c
+	$(CC) $(CFLAGS) $(INCLUDES) -o $@ $< $(LDFLAGS) $(HLTHUNK_LDFLAGS)
+
+clean:
+	rm -f test_gaudi_mlx_dmabuf
+
+# Test targets
+test: test_gaudi_mlx_dmabuf
+	LD_LIBRARY_PATH=$(UCX_PREFIX)/lib:$$LD_LIBRARY_PATH ./test_gaudi_mlx_dmabuf
+
+.PHONY: all clean test
