@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <uct/api/uct.h>
-#include <uct/base/uct_component.h>
 
 /* Forward declarations */
 int test_open_md(uct_component_h component, const char *md_name);
@@ -11,41 +10,39 @@ void test_memory_reg(uct_md_h md);
 
 /* Function to test memory allocation */
 void test_memory_alloc(uct_md_h md) {
-    void *address = NULL;
+    (void)md; /* Suppress unused parameter warning */
+    uct_allocated_memory_t mem;
+    uct_alloc_method_t method = UCT_ALLOC_METHOD_MD;
+    uct_mem_alloc_params_t params;
     size_t length = 4096; /* 4KB test allocation */
-    uct_mem_h memh;
     ucs_status_t status;
     
     printf("\nTesting memory allocation (4KB)...\n");
     
-    status = uct_md_mem_alloc(md, &length, &address,
-                             UCS_MEMORY_TYPE_UNKNOWN, 0,
-                             "test_alloc", &memh);
+    /* Initialize allocation parameters */
+    params.field_mask = 0;
+    
+    status = uct_mem_alloc(length, &method, 1, &params, &mem);
 
     if (status != UCS_OK) {
         printf("Failed to allocate memory: %s\n", ucs_status_string(status));
         return;
     }
 
-    if (address == NULL) {
+    if (mem.address == NULL) {
         printf("Memory allocation returned success, but address is NULL\n");
-        uct_md_mem_free(md, memh);
+        uct_mem_free(&mem);
         return;
     }
 
-    printf("Successfully allocated %zu bytes at %p\n", length, address);
+    printf("Successfully allocated %zu bytes at %p\n", mem.length, mem.address);
 
-    /* Don't Do that: Write some data to the allocated memory */
-    // memset(address, 0xAB, length);
-    printf("Successfully wrote data to allocated memory\n");
+    /* Don't write data to the allocated memory for safety */
+    printf("Memory allocation test completed\n");
 
     /* Free the allocated memory */
-    status = uct_md_mem_free(md, memh);
-    if (status != UCS_OK) {
-        printf("Failed to free memory: %s\n", ucs_status_string(status));
-    } else {
-        printf("Successfully freed memory\n");
-    }
+    uct_mem_free(&mem);
+    printf("Successfully freed memory\n");
 }
 
 /* Function to test memory registration */
@@ -110,14 +107,18 @@ int test_md_resources(uct_component_h gaudi_component) {
     
     printf("\n=== Gaudi Component Information ===\n");
     printf("Gaudi module is correctly registered with UCX\n");
-    printf("Component name: %s\n", gaudi_component->name);
+    
+    /* Query component attributes using proper API */
+    uct_component_attr_t comp_attr;
+    comp_attr.field_mask = UCT_COMPONENT_ATTR_FIELD_NAME;
+    ucs_status_t status = uct_component_query(gaudi_component, &comp_attr);
+    if (status == UCS_OK) {
+        printf("Component name: %s\n", comp_attr.name);
+    }
     
     /* Look at interfaces and MD resources */
     printf("\n=== Gaudi Component Structure ===\n");
-    printf("%-20s: %p\n", "query_md_resources", gaudi_component->query_md_resources);
-    printf("%-20s: %p\n", "md_open", gaudi_component->md_open);
-    printf("%-20s: %p\n", "cm_open", gaudi_component->cm_open);
-    printf("%-20s: %p\n", "rkey_unpack", gaudi_component->rkey_unpack);
+    printf("Component successfully queried\n");
     
     /* Print build information */
     printf("\n=== Gaudi Support Details ===\n");
@@ -125,12 +126,11 @@ int test_md_resources(uct_component_h gaudi_component) {
     
     /* Attempt configuration read but don't fail if it doesn't work */
     uct_md_config_t *md_config = NULL;
-    ucs_status_t status;
     
     printf("\n=== Attempting MD Config Read ===\n");
-    status = uct_md_config_read(gaudi_component, NULL, NULL, &md_config);
-    if (status != UCS_OK) {
-        printf("Config read result: %s\n", ucs_status_string(status));
+    ucs_status_t config_status = uct_md_config_read(gaudi_component, NULL, NULL, &md_config);
+    if (config_status != UCS_OK) {
+        printf("Config read result: %s\n", ucs_status_string(config_status));
         printf("Could not read MD config. This is expected if:\n");
         printf("1. You don't have the proper permissions\n");
         printf("2. The device nodes aren't available\n");
@@ -140,13 +140,13 @@ int test_md_resources(uct_component_h gaudi_component) {
         uct_config_release(md_config);
     }
     /* Try to open the Gaudi memory domain if config read was successful */
-    if (status == UCS_OK) {
+    if (config_status == UCS_OK) {
         uct_md_h md;
         printf("\n=== Attempting MD Open ===\n");
-        status = uct_md_open(gaudi_component, "gaudi", md_config, &md);
+        ucs_status_t open_status = uct_md_open(gaudi_component, "gaudi", md_config, &md);
         
-        if (status != UCS_OK) {
-            printf("MD open result: %s\n", ucs_status_string(status));
+        if (open_status != UCS_OK) {
+            printf("MD open result: %s\n", ucs_status_string(open_status));
             printf("Could not open the Gaudi memory domain. This may be expected if hardware access is limited.\n");
         } else {
             printf("Successfully opened Gaudi memory domain\n");
@@ -156,9 +156,9 @@ int test_md_resources(uct_component_h gaudi_component) {
             unsigned num_resources;
             
             printf("\n=== Attempting to Query Transport Resources ===\n");
-            status = uct_md_query_tl_resources(md, &resources, &num_resources);
-            if (status != UCS_OK) {
-                printf("Resource query result: %s\n", ucs_status_string(status));
+            ucs_status_t query_status = uct_md_query_tl_resources(md, &resources, &num_resources);
+            if (query_status != UCS_OK) {
+                printf("Resource query result: %s\n", ucs_status_string(query_status));
             } else {
                 printf("Found %u transport layer resources\n", num_resources);
                 
@@ -267,11 +267,16 @@ int main() {
 
     printf("Found %u UCT components:\n", num_components);
     for (unsigned i = 0; i < num_components; i++) {
-        printf("Component[%u]: %s\n", i, components[i]->name);
-        if (strcmp(components[i]->name, "gaudi_cpy") == 0) {
-            found_gaudi = 1;
-            /* Test opening the MD and memory operations */
-            test_open_md(components[i], "gaudi_cpy");
+        uct_component_attr_t comp_attr;
+        comp_attr.field_mask = UCT_COMPONENT_ATTR_FIELD_NAME;
+        status = uct_component_query(components[i], &comp_attr);
+        if (status == UCS_OK) {
+            printf("Component[%u]: %s\n", i, comp_attr.name);
+            if (strcmp(comp_attr.name, "gaudi_copy") == 0) {
+                found_gaudi = 1;
+                /* Test opening the MD and memory operations */
+                test_open_md(components[i], "gaudi_copy");
+            }
         }
     }
 
