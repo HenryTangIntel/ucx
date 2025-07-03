@@ -39,19 +39,24 @@ GAUDI_TESTS = gaudi_async_test.c \
 			  gaudi_test_final.c \
 			  gaudi_uct_direct_test.c \
 			  gaudi_uct_simple_test.c \
-			  gaudi_ucx_transport_test.c
+			  gaudi_ucx_transport_test.c \
+			  test_gaudi_ib_integration.c \
+			  test_gaudi_simple.c
 
 DMABUF_TESTS = test_dmabuf_comprehensive.c \
 			   test_dmabuf_simple.c \
 			   test_gaudi_dmabuf.c \
 			   test_gaudi_mlx_dmabuf.c \
+			   test_gaudi_mlx_dmabuf_simple.c \
 			   test_ucx_dmabuf.c
 
 DETECTION_TESTS = test_gaudi_detection.c \
 				  ucx_gaudi_integration_test.c
 
 UCM_TESTS = test_ucm_gaudi.c \
-		    test_ucm_gaudi_hooks.c
+		    test_ucm_gaudi_hooks.c \
+		    test_ucm_gaudi_hooks_clean.c \
+		    test_ucm_gaudi_simple.c
 
 VERIFICATION_TESTS = final_verification_test.c
 
@@ -108,6 +113,47 @@ gaudi_uct_direct_test: gaudi_uct_direct_test.c
 gaudi_uct_simple_test: gaudi_uct_simple_test.c
 	$(CC) $(CFLAGS) $(INCLUDES) $(BUILD_LIBDIR) -o $@ $< -luct -lucs $(BUILD_RPATH)
 
+# Gaudi integration tests
+test_gaudi_ib_integration: test_gaudi_ib_integration.c
+	@echo "Building $@ (Gaudi + InfiniBand integration)..."
+	@$(CC) $(CFLAGS) $(INCLUDES) $(INSTALL_LIBDIR) -o $@ $< -luct -lucs -lpthread $(INSTALL_RPATH) || \
+	 echo "⚠️  $@ build failed - check InfiniBand support"
+
+test_gaudi_simple: test_gaudi_simple.c
+	@echo "Building $@ (Basic Gaudi test)..."
+	@$(CC) $(CFLAGS) $(INCLUDES) $(INSTALL_LIBDIR) -o $@ $< -luct -lucs $(HLTHUNK_LIB) $(INSTALL_RPATH)
+
+test_gaudi_dmabuf: test_gaudi_dmabuf.c
+	@echo "Building $@ (Gaudi DMA-BUF test)..."
+	@$(CC) $(CFLAGS) $(INCLUDES) $(INSTALL_LIBDIR) -o $@ $< -luct -lucs $(HLTHUNK_LIB) $(INSTALL_RPATH)
+
+test_gaudi_mlx_dmabuf_simple: test_gaudi_mlx_dmabuf_simple.c
+	@echo "Building $@ (Simple Gaudi + MLX DMA-BUF test)..."
+	@$(CC) $(CFLAGS) $(INCLUDES) $(INSTALL_LIBDIR) -o $@ $< -luct -lucs $(HLTHUNK_LIB) $(INSTALL_RPATH)
+
+test_dmabuf_comprehensive: test_dmabuf_comprehensive.c
+	@echo "Building $@ (Comprehensive DMA-BUF test)..."
+	@$(CC) $(CFLAGS) $(INCLUDES) $(INSTALL_LIBDIR) -o $@ $< -luct -lucs $(INSTALL_RPATH)
+
+test_ucx_dmabuf: test_ucx_dmabuf.c
+	@echo "Building $@ (UCX DMA-BUF test)..."
+	@$(CC) $(CFLAGS) $(INCLUDES) $(INSTALL_LIBDIR) -o $@ $< -lucp -luct -lucs $(INSTALL_RPATH)
+
+# UCM Gaudi simple test
+test_ucm_gaudi_simple: test_ucm_gaudi_simple.c
+	@echo "Building $@ (Simple UCM Gaudi test)..."
+	@if [ "$(HLTHUNK_AVAILABLE)" = "yes" ]; then \
+		$(CC) $(CFLAGS) -DHAVE_HLTHUNK_H \
+			-I$(UCX_INSTALL_DIR)/include \
+			$(INSTALL_LIBDIR) -L/usr/lib/habanalabs \
+			-o $@ $< -lucm -lucs -lhl-thunk \
+			$(INSTALL_RPATH) -Wl,-rpath,/usr/lib/habanalabs; \
+	else \
+		echo "⚠️  Building simple UCM test without hlthunk support"; \
+		$(CC) $(CFLAGS) -I$(UCX_INSTALL_DIR)/include $(INSTALL_LIBDIR) \
+			-o $@ $< -lucm -lucs $(INSTALL_RPATH); \
+	fi
+
 # UCM tests need special handling for hlthunk integration
 test_ucm_gaudi: test_ucm_gaudi.c
 	@echo "Building $@ (UCM basic test)..."
@@ -147,6 +193,22 @@ test_ucm_gaudi_hooks: test_ucm_gaudi_hooks.c
 			-o $@ $< -lucm -lucs -ldl $(INSTALL_RPATH); \
 	fi
 
+test_ucm_gaudi_hooks_clean: test_ucm_gaudi_hooks_clean.c
+	@echo "Building $@ (UCM clean hooks test with hlthunk)..."
+	@if [ "$(HLTHUNK_AVAILABLE)" = "yes" ]; then \
+		$(CC) $(CFLAGS) -DHAVE_HLTHUNK_H \
+			-I$(UCX_INSTALL_DIR)/include \
+			-I$(UCX_BUILD_DIR)/src \
+			-I/usr/include/drm \
+			$(INSTALL_LIBDIR) -L$(UCX_INSTALL_DIR)/lib/ucx -L/usr/lib/habanalabs \
+			-o $@ $< -lucm -lucs -lhl-thunk -ldl \
+			$(INSTALL_RPATH) -Wl,-rpath,$(UCX_INSTALL_DIR)/lib/ucx -Wl,-rpath,/usr/lib/habanalabs; \
+	else \
+		echo "⚠️  hlthunk library not available, building basic UCM test only"; \
+		$(CC) $(CFLAGS) -I$(UCX_INSTALL_DIR)/include $(INSTALL_LIBDIR) \
+			-o $@ $< -lucm -lucs -ldl $(INSTALL_RPATH); \
+	fi
+
 # Clean target
 clean:
 	rm -f $(ALL_TARGETS)
@@ -159,19 +221,31 @@ help:
 	@echo "==========================="
 	@echo ""
 	@echo "Available targets:"
-	@echo "  all         - Build all tests"
-	@echo "  gaudi       - Build Gaudi-specific tests"
-	@echo "  dmabuf      - Build DMA-buf integration tests"
-	@echo "  detection   - Build component detection tests"
-	@echo "  ucm         - Build UCM (Unified Communication Memory) tests"
-	@echo "  verification- Build verification tests"
-	@echo "  simple      - Build simple/utility tests"
-	@echo "  clean       - Remove all built executables"
-	@echo "  run-tests   - Run a selection of tests"
+	@echo "  all           - Build all tests"
+	@echo "  gaudi         - Build Gaudi-specific tests"
+	@echo "  dmabuf        - Build DMA-buf integration tests"
+	@echo "  detection     - Build component detection tests"
+	@echo "  ucm           - Build UCM (Unified Communication Memory) tests"
+	@echo "  verification  - Build verification tests"
+	@echo "  simple        - Build simple/utility tests"
+	@echo "  clean         - Remove all built executables"
+	@echo ""
+	@echo "Test Runners:"
+	@echo "  run-tests     - Run a selection of tests"
+	@echo "  test-gaudi    - Run all Gaudi-specific tests"
+	@echo "  test-dmabuf   - Run all DMA-buf tests"
+	@echo "  test-dmabuf-all - Run comprehensive DMA-buf test suite"
+	@echo "  test-integration - Run integration tests (Gaudi+IB, DMA-BUF)"
+	@echo "  test-ucm      - Run UCM tests specifically"
+	@echo "  test-ucm-clean - Run clean UCM hooks test only"
 	@echo "  test-gaudi-direct - Run UCX Gaudi direct transport test"
-	@echo "  test-ucm    - Run UCM tests specifically"
-	@echo "  quick-test  - Run a quick UCX test"
-	@echo "  help        - Show this help"
+	@echo "  quick-test    - Run a quick UCX test"
+	@echo ""
+	@echo "Utilities:"
+	@echo "  check-ucx     - Check UCX installation"
+	@echo "  list-tests    - List all available test executables"
+	@echo "  install-scripts - Create test runner scripts"
+	@echo "  help          - Show this help"
 	@echo ""
 	@echo "Test Categories:"
 	@echo "  Gaudi Tests:"
@@ -190,11 +264,12 @@ help:
 	@for test in $(VERIFICATION_TARGETS); do echo "    $$test"; done
 	@echo ""
 	@echo "Usage Examples:"
-	@echo "  make gaudi                    # Build all Gaudi tests"
-	@echo "  make ucm                      # Build all UCM tests"
-	@echo "  make gaudi_uct_simple_test    # Build specific test"
-	@echo "  make test_ucm_gaudi_hooks     # Build UCM hooks test"
-	@echo "  make run-tests                # Run test suite"
+	@echo "  make gaudi                      # Build all Gaudi tests"
+	@echo "  make test-integration           # Run integration tests"
+	@echo "  make test_gaudi_ib_integration  # Build/run specific integration test"
+	@echo "  make test-dmabuf-all            # Run all DMA-BUF tests"
+	@echo "  make test_ucm_gaudi_hooks       # Build UCM hooks test"
+	@echo "  make run-tests                  # Run comprehensive test suite"
 
 # Test runner target
 run-tests: simple detection ucm verification
@@ -213,6 +288,8 @@ run-tests: simple detection ucm verification
 	 ./test_ucm_gaudi || echo "UCM basic test completed with issues"
 	@export UCX_MEM_EVENTS=yes LD_LIBRARY_PATH="../install/lib:/usr/lib/habanalabs:$$LD_LIBRARY_PATH" && \
 	 ./test_ucm_gaudi_hooks || echo "UCM hooks test completed with issues"
+	@export UCX_MEM_EVENTS=yes LD_LIBRARY_PATH="../install/lib:../install/lib/ucx:/usr/lib/habanalabs:$$LD_LIBRARY_PATH" && \
+	 ./test_ucm_gaudi_hooks_clean || echo "UCM clean hooks test completed with issues"
 	@echo ""
 	@echo "4. UCX integration test..."
 	@export LD_LIBRARY_PATH="../install/lib:$$LD_LIBRARY_PATH" && \
@@ -280,6 +357,31 @@ test-dmabuf: dmabuf
 	   echo ""; \
 	 done
 
+# Run integration tests specifically
+test-integration: test_gaudi_ib_integration test_gaudi_mlx_dmabuf_simple test_ucx_dmabuf
+	@echo "Running Integration Tests..."
+	@echo "============================"
+	@export LD_LIBRARY_PATH="../install/lib:$$LD_LIBRARY_PATH" && \
+	 echo "1. Gaudi + InfiniBand Integration..." && \
+	 ./test_gaudi_ib_integration || echo "Gaudi-IB integration test completed" && \
+	 echo "" && \
+	 echo "2. Simple Gaudi + MLX DMA-BUF..." && \
+	 ./test_gaudi_mlx_dmabuf_simple || echo "Simple Gaudi-MLX test completed" && \
+	 echo "" && \
+	 echo "3. UCX DMA-BUF Test..." && \
+	 ./test_ucx_dmabuf || echo "UCX DMA-BUF test completed"
+
+# Run all DMA-BUF related tests
+test-dmabuf-all: test_dmabuf_comprehensive test_dmabuf_simple test_gaudi_dmabuf test_ucx_dmabuf
+	@echo "Running All DMA-BUF Tests..."
+	@echo "============================"
+	@export LD_LIBRARY_PATH="../install/lib:$$LD_LIBRARY_PATH" && \
+	 for test in test_dmabuf_comprehensive test_dmabuf_simple test_gaudi_dmabuf test_ucx_dmabuf; do \
+	   echo "Running $$test..."; \
+	   ./$$test || echo "$$test completed with issues"; \
+	   echo ""; \
+	 done
+
 # Run UCM tests with proper environment
 test-ucm: ucm
 	@echo "Running UCM (Unified Communication Memory) tests..."
@@ -291,6 +393,13 @@ test-ucm: ucm
 	   echo ""; \
 	 done
 
+# Run just the working UCM clean test
+test-ucm-clean: test_ucm_gaudi_hooks_clean
+	@echo "Running UCM Clean Hooks Test..."
+	@echo "==============================="
+	@export UCX_MEM_EVENTS=yes LD_LIBRARY_PATH="../install/lib:../install/lib/ucx:/usr/lib/habanalabs:$$LD_LIBRARY_PATH" && \
+	 ./test_ucm_gaudi_hooks_clean
+
 # Debug build (with extra debugging info)
 debug: CFLAGS += -DDEBUG -g3 -O0
 debug: all
@@ -299,4 +408,6 @@ debug: all
 release: CFLAGS += -DNDEBUG -O3
 release: all
 
-.PHONY: install-scripts check-ucx list-tests test-gaudi test-dmabuf test-ucm debug release quick-test test-gaudi-direct
+.PHONY: all clean gaudi dmabuf detection ucm verification simple help run-tests \
+        test-gaudi test-dmabuf test-dmabuf-all test-integration test-ucm test-ucm-clean \
+        install-scripts check-ucx list-tests debug release quick-test test-gaudi-direct

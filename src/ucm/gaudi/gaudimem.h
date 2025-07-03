@@ -27,6 +27,7 @@ uint64_t ucm_hlthunk_device_memory_alloc(int fd, uint64_t size, uint64_t page_si
 int ucm_hlthunk_device_memory_free(int fd, uint64_t handle);
 uint64_t ucm_hlthunk_device_memory_map(int fd, uint64_t handle, uint64_t hint_addr);
 int ucm_hlthunk_device_memory_unmap(int fd, uint64_t addr);
+int ucm_hlthunk_device_memory_unmap(int fd, uint64_t addr);
 
 #ifdef __cplusplus
 }

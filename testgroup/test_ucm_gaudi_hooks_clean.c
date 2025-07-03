@@ -36,153 +36,18 @@ static ucm_test_events_t g_events = {0};
 // Forward declarations
 static void mem_alloc_callback(ucm_event_type_t event_type, ucm_event_t *event, void *arg);
 static void mem_free_callback(ucm_event_type_t event_type, ucm_event_t *event, void *arg);
-
-#ifdef HAVE_HLTHUNK_H
-
-// UCM manual event dispatch functions for hlthunk
-static void ucm_hlthunk_dispatch_mem_alloc(uint64_t handle, size_t length)
-{
-    ucm_event_t event;
-
-    event.mem_type.address  = (void*)handle; /* Use handle as pseudo-address */
-    event.mem_type.size     = length;
-    event.mem_type.mem_type = UCS_MEMORY_TYPE_UNKNOWN; /* Custom Gaudi memory type */
-    
-    // Manually dispatch the UCM event
-    // Note: In a real implementation, this would be done through internal UCM APIs
-    printf("UCM Dispatch: Gaudi memory allocation event - handle: 0x%lx, size: %zu\n", 
-           handle, length);
-}
-
-static void ucm_hlthunk_dispatch_mem_free(uint64_t handle)
-{
-    ucm_event_t event;
-
-    if (handle == 0) {
-        return;
-    }
-
-    event.mem_type.address  = (void*)handle;
-    event.mem_type.size     = 0; /* Size unknown for free */
-    event.mem_type.mem_type = UCS_MEMORY_TYPE_UNKNOWN;
-    
-    printf("UCM Dispatch: Gaudi memory free event - handle: 0x%lx\n", handle);
-}
-
-// Wrapper functions that integrate with UCM
-uint64_t ucm_wrapped_hlthunk_device_memory_alloc(int fd, uint64_t size, uint64_t page_size,
-                                                 bool contiguous, bool shared)
-{
-    uint64_t handle;
-    
-    printf("UCM Wrapper: hlthunk_device_memory_alloc(fd=%d, size=%lu)\n", fd, size);
-    
-    // Call original function
-    handle = hlthunk_device_memory_alloc(fd, size, page_size, contiguous, shared);
-    
-    if (handle != 0) {
-        // Dispatch UCM event
-        ucm_hlthunk_dispatch_mem_alloc(handle, size);
-        
-        // Manually trigger the UCM callback to simulate event processing
-        ucm_event_t event;
-        event.mem_type.address = (void*)handle;
-        event.mem_type.size = size;
-        event.mem_type.mem_type = UCS_MEMORY_TYPE_UNKNOWN;
-        
-        // Call our callback directly to demonstrate the event
-        mem_alloc_callback(UCM_EVENT_MEM_TYPE_ALLOC, &event, NULL);
-    }
-    
-    return handle;
-}
-
-int ucm_wrapped_hlthunk_device_memory_free(int fd, uint64_t handle)
-{
-    int ret;
-    
-    printf("UCM Wrapper: hlthunk_device_memory_free(fd=%d, handle=0x%lx)\n", fd, handle);
-    
-    if (handle != 0) {
-        // Dispatch UCM event before freeing
-        ucm_hlthunk_dispatch_mem_free(handle);
-        
-        // Manually trigger the UCM callback to simulate event processing
-        ucm_event_t event;
-        event.mem_type.address = (void*)handle;
-        event.mem_type.size = 0;
-        event.mem_type.mem_type = UCS_MEMORY_TYPE_UNKNOWN;
-        
-        // Call our callback directly to demonstrate the event
-        mem_free_callback(UCM_EVENT_MEM_TYPE_FREE, &event, NULL);
-    }
-    
-    // Call original function
-    ret = hlthunk_device_memory_free(fd, handle);
-    
-    return ret;
-}
-
-uint64_t ucm_wrapped_hlthunk_device_memory_map(int fd, uint64_t handle, uint64_t hint_addr)
-{
-    uint64_t mapped_addr;
-    
-    printf("UCM Wrapper: hlthunk_device_memory_map(fd=%d, handle=0x%lx, hint_addr=0x%lx)\n", 
-           fd, handle, hint_addr);
-    
-    // Call original function
-    mapped_addr = hlthunk_device_memory_map(fd, handle, hint_addr);
-    
-    if (mapped_addr != 0) {
-        printf("UCM Dispatch: Gaudi memory map event - mapped_addr: 0x%lx, handle: 0x%lx\n", 
-               mapped_addr, handle);
-        
-        // Manually trigger the UCM callback to simulate VM mapping event
-        ucm_event_t event;
-        event.vm_mapped.address = (void*)mapped_addr;
-        event.vm_mapped.size = 0; /* Size unknown for map */
-        
-        // Call our mmap callback directly to demonstrate the event
-        vm_mapped_callback(UCM_EVENT_VM_MAPPED, &event, NULL);
-    }
-    
-    return mapped_addr;
-}
-
-int ucm_wrapped_hlthunk_device_memory_unmap(int fd, uint64_t addr)
-{
-    int ret;
-    
-    printf("UCM Wrapper: hlthunk_device_memory_unmap(fd=%d, addr=0x%lx)\n", fd, addr);
-    
-    if (addr != 0) {
-        printf("UCM Dispatch: Gaudi memory unmap event - addr: 0x%lx\n", addr);
-        
-        // Manually trigger the UCM callback to simulate VM unmapping event
-        ucm_event_t event;
-        event.vm_unmapped.address = (void*)addr;
-        event.vm_unmapped.size = 0; /* Size unknown for unmap */
-        
-        // Call our munmap callback directly to demonstrate the event
-        vm_unmapped_callback(UCM_EVENT_VM_UNMAPPED, &event, NULL);
-    }
-    
-    // Call original function
-    ret = hlthunk_device_memory_unmap(fd, addr);
-    
-    return ret;
-}
-
-#endif /* HAVE_HLTHUNK_H */
+static void mmap_callback(ucm_event_type_t event_type, ucm_event_t *event, void *arg);
+static void munmap_callback(ucm_event_type_t event_type, ucm_event_t *event, void *arg);
+static void vm_mapped_callback(ucm_event_type_t event_type, ucm_event_t *event, void *arg);
+static void vm_unmapped_callback(ucm_event_type_t event_type, ucm_event_t *event, void *arg);
 
 // Event callbacks
 static void mem_alloc_callback(ucm_event_type_t event_type, ucm_event_t *event, void *arg)
 {
     (void)event_type; /* Suppress unused parameter warning */
     (void)arg; /* Suppress unused parameter warning */
-    printf("UCM Event: Memory allocation - addr: %p, size: %zu, type: %d\n",
+    printf("UCM Event: Memory allocated - addr: %p, size: %zu, type: %d\n", 
            event->mem_type.address, event->mem_type.size, event->mem_type.mem_type);
-    
     g_events.alloc_events++;
     g_events.last_alloc_addr = event->mem_type.address;
     g_events.last_alloc_size = event->mem_type.size;
@@ -193,9 +58,8 @@ static void mem_free_callback(ucm_event_type_t event_type, ucm_event_t *event, v
 {
     (void)event_type; /* Suppress unused parameter warning */
     (void)arg; /* Suppress unused parameter warning */
-    printf("UCM Event: Memory free - addr: %p, type: %d\n",
-           event->mem_type.address, event->mem_type.mem_type);
-    
+    printf("UCM Event: Memory freed - addr: %p, size: %zu, type: %d\n", 
+           event->mem_type.address, event->mem_type.size, event->mem_type.mem_type);
     g_events.free_events++;
     g_events.last_free_addr = event->mem_type.address;
     g_events.last_free_type = event->mem_type.mem_type;
@@ -254,7 +118,7 @@ static void print_event_summary(void)
     printf("VM mapped events: %d\n", g_events.vm_mapped_events);
     printf("VM unmapped events: %d\n", g_events.vm_unmapped_events);
     if (g_events.last_alloc_addr) {
-        printf("Last allocation: %p, size: %zu, type: %d\n",
+        printf("Last alloc: %p, size: %zu, type: %d\n", 
                g_events.last_alloc_addr, g_events.last_alloc_size, g_events.last_alloc_type);
     }
     if (g_events.last_free_addr) {
@@ -388,14 +252,8 @@ static void test_gaudi_memory_with_ucm_hooks(void)
             printf("✓ Mapped Gaudi device memory: mapped_addr=0x%lx, handle=0x%lx\n", 
                    mapped_addr, handle);
             
-            // Test unmapping the device memory (will be intercepted by UCM)
-            printf("Testing Gaudi device memory unmapping (intercepted by UCM)...\n");
-            int unmap_ret = hlthunk_device_memory_unmap(fd, mapped_addr);
-            if (unmap_ret == 0) {
-                printf("✓ Unmapped Gaudi device memory: addr=0x%lx\n", mapped_addr);
-            } else {
-                printf("✗ Failed to unmap Gaudi device memory: %d\n", unmap_ret);
-            }
+            // Note: This hlthunk version doesn't have unmap function
+            printf("ℹ  hlthunk_device_memory_unmap not available in this hlthunk version\n");
         } else {
             printf("✗ Failed to map Gaudi device memory\n");
         }
@@ -428,7 +286,7 @@ static void test_ucm_query_info(void)
 {
     printf("\n=== Testing UCM Query Information ===\n");
     printf("✓ UCM is available and integrated\n");
-    printf("  Note: This test demonstrates UCM wrapper integration with hlthunk\n");
+    printf("  Note: This test demonstrates UCM automatic interception with hlthunk\n");
 }
 
 int main(int argc, char **argv)
@@ -438,29 +296,32 @@ int main(int argc, char **argv)
     ucs_status_t status;
     
     printf("UCX Memory Manager (UCM) Gaudi Integration Test with Hooks\n");
-    printf("==============================================================\n");
+    printf("=========================================================\n");
     
-    // Initialize UCM
-    printf("Initializing UCM...\n");
-    
-    // Setup event handlers
+    // Initialize UCM and set up event handlers
     status = setup_ucm_events();
     if (status != UCS_OK) {
         printf("Failed to setup UCM events: %s\n", ucs_status_string(status));
         return 1;
     }
     
-    // Run tests
-    test_ucm_query_info();
+    // Test system memory to verify UCM is working
     test_system_memory_with_ucm();
+    
+    // Test Gaudi memory operations (these should trigger UCM events automatically)
     test_gaudi_memory_with_ucm_hooks();
+    
+    // Display UCM information
+    test_ucm_query_info();
     
     // Cleanup
     cleanup_ucm_events();
     
-    printf("\n=== UCM Gaudi Integration Test with Wrappers Complete ===\n");
-    printf("Check the event summaries above to verify UCM wrapper functions\n");
-    printf("are correctly intercepting hlthunk memory operations.\n");
+    printf("\n=== UCM Gaudi Test Complete ===\n");
+    printf("If Gaudi device was available, you should see UCM events for:\n");
+    printf("- MEM_TYPE_ALLOC for hlthunk_device_memory_alloc\n");
+    printf("- MEM_TYPE_FREE for hlthunk_device_memory_free\n");
+    printf("- VM_MAPPED for hlthunk_device_memory_map\n");
     
     return 0;
 }
