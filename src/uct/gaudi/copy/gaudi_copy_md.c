@@ -64,6 +64,37 @@ static ucs_status_t uct_gaudi_copy_md_mem_query(uct_md_h uct_md, const void *add
 /* Dummy memh for already registered memory */
 static struct {} uct_gaudi_dummy_memh;
 
+/**
+ * @brief Check if a memory handle has DMA-BUF that can be shared with InfiniBand
+ */
+static int uct_gaudi_copy_has_dmabuf_for_ib(uct_mem_h memh)
+{
+    uct_gaudi_mem_t *gaudi_memh;
+    
+    if (memh == &uct_gaudi_dummy_memh) {
+        return 0; /* Device memory doesn't have DMA-BUF */
+    }
+    
+    gaudi_memh = (uct_gaudi_mem_t *)memh;
+    return (gaudi_memh->dmabuf_fd >= 0);
+}
+
+/**
+ * @brief Get DMA-BUF file descriptor for InfiniBand integration
+ */
+static int uct_gaudi_copy_get_dmabuf_fd(uct_mem_h memh)
+{
+    uct_gaudi_mem_t *gaudi_memh;
+    
+    if (memh == &uct_gaudi_dummy_memh) {
+        return -1;
+    }
+    
+    gaudi_memh = (uct_gaudi_mem_t *)memh;
+    return gaudi_memh->dmabuf_fd;
+}
+
+
 ucs_status_t uct_gaudi_copy_md_query(uct_md_h md, uct_md_attr_v2_t *md_attr)
 {
     uct_gaudi_copy_md_t *gaudi_md = ucs_derived_of(md, uct_gaudi_copy_md_t);
@@ -100,12 +131,24 @@ uct_gaudi_copy_mkey_pack(uct_md_h md, uct_mem_h memh, void *address,
                         size_t length, const uct_md_mkey_pack_params_t *params,
                         void *mkey_buffer)
 {
-    uct_gaudi_mem_t *gaudi_memh = (uct_gaudi_mem_t *)memh;
     uct_gaudi_key_t *packed_key = (uct_gaudi_key_t *)mkey_buffer;
     
-    packed_key->vaddr = (uint64_t)address;
-    packed_key->length = length;
-    packed_key->dmabuf_fd = gaudi_memh->dmabuf_fd;
+    if (memh == &uct_gaudi_dummy_memh) {
+        /* For device memory, pack device address info */
+        packed_key->vaddr = (uint64_t)address;
+        packed_key->length = length;
+        packed_key->dmabuf_fd = -1; /* No DMA-BUF for device memory */
+    } else {
+        /* For registered/allocated memory, include DMA-BUF info for IB sharing */
+        packed_key->vaddr = (uint64_t)address;
+        packed_key->length = length;
+        packed_key->dmabuf_fd = uct_gaudi_copy_get_dmabuf_fd(memh);
+        
+        if (uct_gaudi_copy_has_dmabuf_for_ib(memh)) {
+            ucs_debug("Packing memory key with DMA-BUF fd=%d for IB transport", 
+                      packed_key->dmabuf_fd);
+        }
+    }
     
     return UCS_OK;
 }
@@ -153,9 +196,15 @@ ucs_status_t uct_gaudi_copy_mem_alloc(uct_md_h md, size_t *length_p,
 
     /* Optionally export as DMA-BUF if flags indicate it */
     if (flags & UCT_MD_MEM_FLAG_FIXED) {
-        /* Export device memory as DMA-BUF for sharing */
-        /* TODO: Implement DMA-BUF export using hlthunk API when available */
-        ucs_debug("DMA-BUF export requested but not yet implemented");
+        /* Export device memory as DMA-BUF for sharing with InfiniBand */
+        int dmabuf_fd = hlthunk_device_memory_export_dmabuf_fd(gaudi_md->hlthunk_fd, 
+                                                             (uint64_t)addr, *length_p, 0);
+        if (dmabuf_fd >= 0) {
+            gaudi_memh->dmabuf_fd = dmabuf_fd;
+            ucs_debug("Exported allocated memory as DMA-BUF fd %d for IB sharing", dmabuf_fd);
+        } else {
+            ucs_warn("Failed to export allocated memory as DMA-BUF (fd=%d)", dmabuf_fd);
+        }
     }
 
     *address_p = (void *)addr;
@@ -264,6 +313,20 @@ uct_gaudi_copy_md_mem_query(uct_md_h tl_md, const void *address, size_t length,
         mem_attr->alloc_length = addr_mem_info.alloc_length;
     }
 
+    if (mem_attr->field_mask & UCT_MD_MEM_ATTR_FIELD_DMABUF_FD) {
+        /* Try to find if this memory region was allocated/registered with DMA-BUF support */
+        uct_mem_h memh = NULL; /* TODO: Need to track allocated memory handles */
+        if (memh && uct_gaudi_copy_has_dmabuf_for_ib(memh)) {
+            mem_attr->dmabuf_fd = uct_gaudi_copy_get_dmabuf_fd(memh);
+        } else {
+            mem_attr->dmabuf_fd = -1; /* Set to invalid by default */
+        }
+    }
+
+    if (mem_attr->field_mask & UCT_MD_MEM_ATTR_FIELD_DMABUF_OFFSET) {
+        mem_attr->dmabuf_offset = 0; /* Offset within DMA-BUF */
+    }
+
     return UCS_OK;
 }
 
@@ -329,8 +392,16 @@ UCS_PROFILE_FUNC(ucs_status_t, uct_gaudi_copy_mem_reg,
     
     /* Export as DMA-BUF if requested and supported */
     if ((flags & UCT_MD_MEM_FLAG_FIXED) && gaudi_md->config.dmabuf_supported) {
-        /* TODO: Implement DMA-BUF export when hlthunk API is available */
-        ucs_debug("DMA-BUF export requested but not yet implemented");
+        /* Export host memory mapped to Gaudi as DMA-BUF for IB sharing */
+        int dmabuf_fd = hlthunk_device_mapped_memory_export_dmabuf_fd(gaudi_md->hlthunk_fd,
+                                                                    (uint64_t)address, length, 0, 0);
+        if (dmabuf_fd >= 0) {
+            gaudi_memh->dmabuf_fd = dmabuf_fd;
+            ucs_debug("Exported registered memory %p as DMA-BUF fd %d for IB sharing", 
+                      address, dmabuf_fd);
+        } else {
+            ucs_debug("Failed to export registered memory as DMA-BUF (fd=%d)", dmabuf_fd);
+        }
     }
     
     ucs_trace("Registered Gaudi memory %p, size %zu", address, length);
@@ -475,4 +546,3 @@ uct_component_t uct_gaudi_copy_component = {
     .flags              = 0,
     .md_vfs_init        = (uct_component_md_vfs_init_func_t)ucs_empty_function
 };
-UCT_COMPONENT_REGISTER(&uct_gaudi_copy_component);
