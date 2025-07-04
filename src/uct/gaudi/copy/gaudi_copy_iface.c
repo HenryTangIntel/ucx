@@ -37,17 +37,9 @@ static ucs_config_field_t uct_gaudi_copy_iface_config_table[] = {
      "Max number of gaudi events. -1 is infinite",
      ucs_offsetof(uct_gaudi_copy_iface_config_t, max_gaudi_events), UCS_CONFIG_TYPE_UINT},
 
-    {"BW", "10000MBs,h2d:8300MBs,d2h:11660MBs,d2d:320GBs",
-     "Effective memory bandwidth", 0,
-     UCS_CONFIG_TYPE_KEY_VALUE(UCS_CONFIG_TYPE_BW,
-         {"h2d", "host to device bandwidth",
-          ucs_offsetof(uct_gaudi_copy_iface_config_t, bw.h2d)},
-         {"d2h", "device to host bandwidth",
-          ucs_offsetof(uct_gaudi_copy_iface_config_t, bw.d2h)},
-         {"d2d", "device to device bandwidth",
-          ucs_offsetof(uct_gaudi_copy_iface_config_t, bw.d2d)},
-         {"dflt", "default bandwidth",
-          ucs_offsetof(uct_gaudi_copy_iface_config_t, bw.dflt)})},
+    {"BW", "10000MBs",
+     "Effective memory bandwidth",
+     ucs_offsetof(uct_gaudi_copy_iface_config_t, bandwidth), UCS_CONFIG_TYPE_BW},
 
     {NULL}
 };
@@ -106,8 +98,8 @@ static ucs_status_t uct_gaudi_copy_iface_query(uct_iface_h tl_iface,
     iface_attr->cap.get.max_zcopy       = SIZE_MAX;
 
     iface_attr->latency                 = UCT_GAUDI_COPY_IFACE_LATENCY;
-    iface_attr->bandwidth.dedicated     = iface->config.bw.dflt;
-    iface_attr->bandwidth.shared        = 0;
+    iface_attr->bandwidth.dedicated     = 0;
+    iface_attr->bandwidth.shared        = iface->config.bandwidth;
     iface_attr->overhead                = UCT_GAUDI_COPY_IFACE_OVERHEAD;
     iface_attr->priority                = 0;
 
@@ -179,11 +171,11 @@ static UCS_CLASS_INIT_FUNC(uct_gaudi_copy_iface_t, uct_md_h md, uct_worker_h wor
                               params, tl_config);
 
     self->id = (uintptr_t)self;
-    self->config.bw = config->bw;
+    self->config.bandwidth = config->bandwidth;
 
     return UCS_OK;
 }
 
-UCT_TL_DEFINE(&uct_gaudi_copy_component, gaudi_copy, uct_gaudi_base_query_devices,
+UCT_TL_DEFINE(&uct_gaudi_copy_component, gaudi_cpy, uct_gaudi_base_query_devices,
               uct_gaudi_copy_iface_t, "GAUDI_COPY_",
               uct_gaudi_copy_iface_config_table, uct_gaudi_copy_iface_config_t);

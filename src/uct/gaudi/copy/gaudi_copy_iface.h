@@ -15,20 +15,13 @@
 
 typedef uint64_t uct_gaudi_copy_iface_addr_t;
 
-typedef struct uct_gaudi_copy_bw {
-    double            h2d;
-    double            d2h;
-    double            d2d;
-    double            dflt;
-} uct_gaudi_copy_bw_t;
-
 typedef struct uct_gaudi_copy_iface {
     uct_gaudi_iface_t           super;
     /* used to store uuid and check iface reachability */
     uct_gaudi_copy_iface_addr_t id;
     /* config parameters to control gaudi copy transport */
     struct {
-        uct_gaudi_copy_bw_t     bw;
+        double                  bandwidth;
     } config;
     /* handler to support arm/wakeup feature */
     struct {
@@ -42,7 +35,7 @@ typedef struct uct_gaudi_copy_iface_config {
     uct_iface_config_t      super;
     unsigned                max_poll;
     unsigned                max_gaudi_events;
-    uct_gaudi_copy_bw_t     bw;
+    double                  bandwidth;
 } uct_gaudi_copy_iface_config_t;
 
 #endif
