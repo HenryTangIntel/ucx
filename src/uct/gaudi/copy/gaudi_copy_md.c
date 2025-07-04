@@ -124,6 +124,9 @@ ucs_status_t uct_gaudi_copy_md_query(uct_md_h md, uct_md_attr_v2_t *md_attr)
     
     memset(&md_attr->local_cpus, 0xff, sizeof(md_attr->local_cpus));
     
+    ucs_debug("Gaudi MD query: reg_mem_types=0x%lx (host=%d, gaudi=%d), alloc_mem_types=0x%lx", 
+              md_attr->reg_mem_types, UCS_MEMORY_TYPE_HOST, UCS_MEMORY_TYPE_GAUDI, md_attr->alloc_mem_types);
+    
     return UCS_OK;
 }
 
