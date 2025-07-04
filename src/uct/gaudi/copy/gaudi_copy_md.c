@@ -506,21 +506,22 @@ uct_gaudi_copy_md_open(uct_component_t *component, const char *md_name,
     md->config.dmabuf_supported = (config->enable_dmabuf != UCS_NO);
     
     /* Open hlthunk device */
-    md->hlthunk_fd = hlthunk_open(HLTHUNK_DEVICE_GAUDI2, NULL);
+    md->hlthunk_fd = hlthunk_open(HLTHUNK_DEVICE_DONT_CARE, NULL);
     if (md->hlthunk_fd < 0) {
-        ucs_debug("Failed to open hlthunk device, continuing without device access");
-        md->hlthunk_fd = -1;
-    } else {
-        /* Get hardware information */
-        if (hlthunk_get_hw_ip_info(md->hlthunk_fd, &md->hw_info) != 0) {
-            ucs_warn("Failed to get hardware info from hlthunk");
-            memset(&md->hw_info, 0, sizeof(md->hw_info));
-        }
-        
-        md->device_type = "GAUDI2";
-        ucs_debug("Opened Gaudi device fd=%d, DRAM base=0x%lx size=%lu", 
-                  md->hlthunk_fd, md->hw_info.dram_base_address, md->hw_info.dram_size);
+        ucs_warn("Failed to open hlthunk device, Gaudi transport will be disabled");
+        ucs_free(md);
+        return UCS_ERR_NO_DEVICE;
     }
+    
+    /* Get hardware information */
+    if (hlthunk_get_hw_ip_info(md->hlthunk_fd, &md->hw_info) != 0) {
+        ucs_warn("Failed to get hardware info from hlthunk");
+        memset(&md->hw_info, 0, sizeof(md->hw_info));
+    }
+    
+    md->device_type = "GAUDI";
+    ucs_debug("Opened Gaudi device fd=%d, DRAM base=0x%lx size=%lu", 
+              md->hlthunk_fd, md->hw_info.dram_base_address, md->hw_info.dram_size);
 
     *md_p = (uct_md_h)md;
 
@@ -547,3 +548,5 @@ uct_component_t uct_gaudi_copy_component = {
     .flags              = 0,
     .md_vfs_init        = (uct_component_md_vfs_init_func_t)ucs_empty_function
 };
+
+UCT_COMPONENT_REGISTER(&uct_gaudi_copy_component);

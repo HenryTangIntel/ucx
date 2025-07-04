@@ -76,9 +76,19 @@ uct_gaudi_base_query_md_resources(uct_component_t *component,
     char device_name[10];
     int i, num_gpus;
 
-    num_gpus = hlthunk_get_device_count(HLTHUNK_DEVICE_GAUDI);
+    /* Try different Gaudi device types */
+    num_gpus = hlthunk_get_device_count(HLTHUNK_DEVICE_DONT_CARE);
+    if (num_gpus <= 0) {
+        num_gpus = hlthunk_get_device_count(HLTHUNK_DEVICE_GAUDI2);
+        if (num_gpus <= 0) {
+            num_gpus = hlthunk_get_device_count(HLTHUNK_DEVICE_GAUDI);
+            if (num_gpus <= 0) {
+                num_gpus = hlthunk_get_device_count(HLTHUNK_DEVICE_GAUDI3);
+            }
+        }
+    }
 
-    if (num_gpus < 0) {
+    if (num_gpus <= 0) {
         return uct_md_query_empty_md_resource(resources_p, num_resources_p);
     }
 
