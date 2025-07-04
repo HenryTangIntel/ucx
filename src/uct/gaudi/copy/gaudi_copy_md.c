@@ -100,6 +100,9 @@ ucs_status_t uct_gaudi_copy_md_query(uct_md_h md, uct_md_attr_v2_t *md_attr)
 {
     uct_gaudi_copy_md_t *gaudi_md = ucs_derived_of(md, uct_gaudi_copy_md_t);
     
+    ucs_info("Gaudi MD query called - UCS_MEMORY_TYPE_HOST=%d, UCS_MEMORY_TYPE_GAUDI=%d", 
+             UCS_MEMORY_TYPE_HOST, UCS_MEMORY_TYPE_GAUDI);
+    
     md_attr->flags = UCT_MD_FLAG_REG | 
                     UCT_MD_FLAG_ALLOC |
                     UCT_MD_FLAG_NEED_RKEY;
@@ -124,8 +127,8 @@ ucs_status_t uct_gaudi_copy_md_query(uct_md_h md, uct_md_attr_v2_t *md_attr)
     
     memset(&md_attr->local_cpus, 0xff, sizeof(md_attr->local_cpus));
     
-    ucs_debug("Gaudi MD query: reg_mem_types=0x%lx (host=%d, gaudi=%d), alloc_mem_types=0x%lx", 
-              md_attr->reg_mem_types, UCS_MEMORY_TYPE_HOST, UCS_MEMORY_TYPE_GAUDI, md_attr->alloc_mem_types);
+    ucs_info("Gaudi MD query result: reg_mem_types=0x%lx, alloc_mem_types=0x%lx", 
+             md_attr->reg_mem_types, md_attr->alloc_mem_types);
     
     return UCS_OK;
 }

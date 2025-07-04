@@ -8,12 +8,8 @@
 
 #include <uct/base/uct_md.h>
 #include <uct/gaudi/base/gaudi_md.h>
+#include <ucs/memory/memory_type.h>
 #include <hlthunk.h>
-
-/* Memory types for Gaudi devices */
-#ifndef UCS_MEMORY_TYPE_GAUDI
-#define UCS_MEMORY_TYPE_GAUDI 16  /* Use a value within valid range */
-#endif
 
 /* Gaudi memory handle structure */
 typedef struct uct_gaudi_mem {
