@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Habana Labs, Ltd. ALL RIGHTS RESERVED.
+ * Copyright (c) 2025, Habana Labs Ltd. an Intel Company. ALL RIGHTS RESERVED.
  * See file LICENSE for terms.
  */
 

@@ -1,7 +1,5 @@
 /**
- * Copyright (c) 2019, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
- * Copyright (C) 2020, HabanaLabs, Ltd. an Intel Company.
- *
+ * Copyright (c) 2025, Habana Labs Ltd. an Intel Company. All rights reserved.
  * See file LICENSE for terms.
  */
 
