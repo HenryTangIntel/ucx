@@ -7,12 +7,12 @@ if HAVE_GAUDI
 SUBDIRS = . 
 
 module_LTLIBRARIES      = libuct_gaudi.la
-libuct_gaudi_la_CPPFLAGS = $(BASE_CPPFLAGS) $(GAUDI_CPPFLAGS) -I/scratch2/ytang/integration/hl-thunk/include
+libuct_gaudi_la_CPPFLAGS = $(BASE_CPPFLAGS) $(GAUDI_CPPFLAGS)
 libuct_gaudi_la_CFLAGS   = $(BASE_CFLAGS) $(GAUDI_CFLAGS) $(LT_CFLAGS)
-libuct_gaudi_la_LDFLAGS  = $(GAUDI_LDFLAGS) -version-info $(SOVERSION) -L/scratch2/ytang/integration/hl-thunk/build/lib
+libuct_gaudi_la_LDFLAGS  = $(GAUDI_LDFLAGS) -version-info $(SOVERSION)
 libuct_gaudi_la_LIBADD   = $(top_builddir)/src/ucs/libucs.la \
                           $(top_builddir)/src/uct/libuct.la \
-                          $(GAUDI_LIBS) -lhl-thunk
+                          $(GAUDI_LIBS)
 
 libuct_gaudi_la_SOURCES = \
 	base/gaudi_iface.c \

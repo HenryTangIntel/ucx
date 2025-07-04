@@ -5,9 +5,9 @@
 #
 
 AC_ARG_WITH([gaudi-perftest],
-            [AS_HELP_STRING([--with-gaudi-perftest], [Enable Gaudi support for performance tests])],
+            [AS_HELP_STRING([--with-gaudi-perftest], [Enable Gaudi support for performance tests (default is yes)])],
             [],
-            [with_gaudi_perftest=check])
+            [with_gaudi_perftest=yes])
 
 AS_IF([test "x$with_gaudi_perftest" != "xno"],
       [
@@ -23,7 +23,7 @@ AS_IF([test "x$with_gaudi_perftest" != "xno"],
        LDFLAGS="$LDFLAGS -L/usr/lib/habanalabs"
        
        # Check for hlthunk.h header directly
-       AC_CHECK_HEADER([hlthunk.h],
+       AC_CHECK_HEADER([habanalabs/hlthunk.h],
                        [
                         # Check for hlthunk library function
                         AC_CHECK_LIB([hl-thunk], [hlthunk_open],

@@ -7,8 +7,8 @@ AC_DEFUN([UCX_CHECK_GAUDI],[
 AS_IF([test "x$gaudi_checked" != "xyes"],
    [
     AC_ARG_WITH([gaudi],
-                [AS_HELP_STRING([--with-gaudi=(DIR)], [Enable the use of GAUDI (default is guess).])],
-                [], [with_gaudi=guess])
+                [AS_HELP_STRING([--with-gaudi=(DIR)], [Enable the use of GAUDI (default is yes).])],
+                [], [with_gaudi=yes])
 
     AS_IF([test "x$with_gaudi" = "xno"],
         [
@@ -27,11 +27,11 @@ AS_IF([test "x$gaudi_checked" != "xyes"],
                [
                 AS_IF([test "x$with_gaudi" = "xguess" -o "x$with_gaudi" = "xyes"],
                       [
-                       GAUDI_CPPFLAGS="-I/usr/include -I/usr/include/habanalabs"
+                       GAUDI_CPPFLAGS="-I/usr/include/habanalabs -I/usr/include/drm -DHAVE_GAUDI=1 -DHAVE_HLTHUNK_H=1"
                        GAUDI_LDFLAGS="-L/usr/lib/habanalabs"
                       ],
                       [
-                       GAUDI_CPPFLAGS="-I${with_gaudi}/include -I${with_gaudi}/include/habanalabs"
+                       GAUDI_CPPFLAGS="-I${with_gaudi}/include/habanalabs -I${with_gaudi}/include/drm -DHAVE_GAUDI=1 -DHAVE_HLTHUNK_H=1"
                        GAUDI_LDFLAGS="-L${with_gaudi}/lib/habanalabs"
                       ])
                ])
