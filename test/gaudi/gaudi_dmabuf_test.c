@@ -139,8 +139,12 @@ static int test_ucx_gaudi_dmabuf(size_t buffer_size, int verbose)
 
     /* Find Gaudi component */
     uct_component_h gaudi_component = NULL;
+    uct_component_attr_t comp_attr = {0};
+    comp_attr.field_mask = UCT_COMPONENT_ATTR_FIELD_NAME;
+    
     for (unsigned i = 0; i < num_components; i++) {
-        if (strstr(components[i]->name, "gaudi")) {
+        status = uct_component_query(components[i], &comp_attr);
+        if (status == UCS_OK && strstr(comp_attr.name, "gaudi")) {
             gaudi_component = components[i];
             break;
         }
@@ -151,7 +155,7 @@ static int test_ucx_gaudi_dmabuf(size_t buffer_size, int verbose)
         uct_release_component_list(components);
         return -1;
     }
-    printf("✓ Found Gaudi component: %s\n", gaudi_component->name);
+    printf("✓ Found Gaudi component: %s\n", comp_attr.name);
 
     /* Create MD config */
     status = uct_md_config_read(gaudi_component, NULL, NULL, &md_config);
@@ -170,9 +174,8 @@ static int test_ucx_gaudi_dmabuf(size_t buffer_size, int verbose)
 
     /* Allocate memory with DMA-BUF support */
     status = uct_md_mem_alloc(md, &actual_size, &address, UCS_MEMORY_TYPE_GAUDI, 
-                             UCS_SYS_DEVICE_ID_UNKNOWN, 
-                             UCT_MD_MEM_FLAG_FIXED, /* Request DMA-BUF */
-                             "gaudi_test", &memh);
+                              UCS_SYS_DEVICE_ID_UNKNOWN, UCT_MD_MEM_FLAG_FIXED, 
+                              "gaudi_dmabuf_test", &memh);
     if (status != UCS_OK) {
         printf("ERROR: Failed to allocate Gaudi memory: %s\n", ucs_status_string(status));
         goto cleanup_md;
@@ -197,8 +200,7 @@ static int test_ucx_gaudi_dmabuf(size_t buffer_size, int verbose)
 
     /* Test memory key packing (simulates IB rkey) */
     char mkey_buffer[256];
-    uct_md_mkey_pack_params_t pack_params = {0};
-    status = uct_md_mkey_pack(md, memh, address, actual_size, &pack_params, mkey_buffer);
+    status = uct_md_mkey_pack(md, memh, mkey_buffer);
     if (status == UCS_OK) {
         printf("✓ Packed memory key for remote access\n");
         if (verbose) {

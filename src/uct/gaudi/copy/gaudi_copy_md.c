@@ -164,6 +164,9 @@ ucs_status_t uct_gaudi_copy_mem_alloc(uct_md_h md, size_t *length_p,
     uint64_t handle;
     uint64_t addr;
     
+    ucs_debug("uct_gaudi_copy_mem_alloc called: length=%zu, mem_type=%d, flags=0x%x", 
+              *length_p, mem_type, flags);
+    
     /* Allocate device memory through hl-thunk */
     handle = hlthunk_device_memory_alloc(gaudi_md->hlthunk_fd, *length_p, 
                                       0, true, true);
@@ -172,6 +175,8 @@ ucs_status_t uct_gaudi_copy_mem_alloc(uct_md_h md, size_t *length_p,
         return UCS_ERR_NO_MEMORY;
     }
     
+    ucs_debug("Successfully allocated device memory handle 0x%lx", handle);
+    
     /* Map to host address space */
     addr = hlthunk_device_memory_map(gaudi_md->hlthunk_fd, handle, 0);
     if (addr == 0) {
@@ -179,6 +184,8 @@ ucs_status_t uct_gaudi_copy_mem_alloc(uct_md_h md, size_t *length_p,
         ucs_error("Failed to map device memory handle 0x%lx", handle);
         return UCS_ERR_NO_MEMORY;
     }
+    
+    ucs_debug("Successfully mapped device memory to host address 0x%lx", addr);
     
     gaudi_memh = ucs_calloc(1, sizeof(*gaudi_memh), "gaudi_memh");
     if (gaudi_memh == NULL) {
