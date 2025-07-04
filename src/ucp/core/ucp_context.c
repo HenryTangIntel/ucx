@@ -362,7 +362,7 @@ static ucs_config_field_t ucp_context_config_table[] = {
 
   {"RNDV_FRAG_MEM_TYPES", "host,cuda",
    "Memory types of fragments used for RNDV pipeline protocol.\n"
-   "Allowed memory types are: host, cuda, rocm, ze-host, ze-device",
+   "Allowed memory types are: host, cuda, rocm, ze-host, ze-device, gaudi",
    ucs_offsetof(ucp_context_config_t, rndv_frag_mem_types),
    UCS_CONFIG_TYPE_BITMAP(ucs_memory_type_names)},
 
