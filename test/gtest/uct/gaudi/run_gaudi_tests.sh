@@ -6,7 +6,7 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 UCX_BUILD_DIR="${SCRIPT_DIR}/../../../../.."
-TEST_BINARY="${UCX_BUILD_DIR}/test/gtest/uct/test_uct"
+TEST_BINARY="${UCX_BUILD_DIR}/test/gtest/gtest"
 
 # Check if Gaudi devices are available
 check_gaudi_devices() {

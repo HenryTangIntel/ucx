@@ -4,10 +4,11 @@
  * See file LICENSE for terms.
  */
 
-#include <uct/test_md.h>
-#include <common/test.h>
+#include "../test_md.h"
+#include "../../common/test.h"
 
 extern "C" {
+#include <uct/base/uct_md.h>
 #include <uct/gaudi/copy/gaudi_copy_md.h>
 #include <uct/gaudi/base/gaudi_md.h>
 #include <uct/gaudi/base/gaudi_dma.h>
@@ -24,37 +25,12 @@ protected:
             UCS_TEST_SKIP_R("Gaudi not available");
         }
         
-        /* Initialize MD with gaudi_copy component */
-        uct_md_resource_desc_t *md_resources;
-        unsigned num_md_resources;
-        
-        /* Query for Gaudi MD resources */
-        ucs_status_t status = uct_gaudi_base_query_md_resources(&uct_gaudi_copy_component,
-                                                              &md_resources, 
-                                                              &num_md_resources);
-        ASSERT_UCS_OK(status);
-        
-        if (num_md_resources == 0) {
-            UCS_TEST_SKIP_R("No Gaudi MD resources found");
-        }
-        
-        /* Open the MD */
-        uct_md_config_t *md_config;
-        status = uct_md_config_read(&uct_gaudi_copy_component, NULL, NULL, &md_config);
-        ASSERT_UCS_OK(status);
-        
-        status = uct_md_open(&uct_gaudi_copy_component, md_resources[0].md_name, 
-                           md_config, &m_md);
-        ASSERT_UCS_OK(status);
-        
-        uct_config_release(md_config);
-        ucs_free(md_resources);
+        /* Call parent init to set up MD */
+        test_md::init();
     }
     
     void cleanup() {
-        if (m_md != NULL) {
-            uct_md_close(m_md);
-        }
+        test_md::cleanup();
     }
     
     static bool is_gaudi_available() {
@@ -108,22 +84,22 @@ UCS_TEST_F(test_gaudi_md, query_md_attr) {
     EXPECT_TRUE(md_attr.cap.access_mem_types & UCS_BIT(UCS_MEMORY_TYPE_HOST));
     
     /* Check DMABUF support */
-    EXPECT_TRUE(md_attr.cap.flags & UCT_MD_FLAG_DMABUF);
+    EXPECT_TRUE(md_attr.cap.flags & UCT_MD_FLAG_REG_DMABUF);
     
     /* Check remote key size */
     EXPECT_GT(md_attr.rkey_packed_size, 0u);
 }
 
 UCS_TEST_F(test_gaudi_md, memory_allocation) {
-    const size_t size = 4096;
+    size_t size = 4096;
     void *address;
     uct_mem_h memh;
     
     /* Test Gaudi memory allocation */
-    ucs_status_t status = uct_mem_alloc(m_md, &size, &address, 
-                                       UCS_MEMORY_TYPE_GAUDI, 
-                                       UCS_SYS_DEVICE_ID_UNKNOWN, 
-                                       0, "test_alloc", &memh);
+    ucs_status_t status = uct_md_mem_alloc(m_md, &size, &address, 
+                                          UCS_MEMORY_TYPE_GAUDI, 
+                                          UCS_SYS_DEVICE_ID_UNKNOWN, 
+                                          0, "test_alloc", &memh);
     if (status == UCS_ERR_UNSUPPORTED) {
         UCS_TEST_SKIP_R("Gaudi memory allocation not supported");
     }
@@ -133,7 +109,7 @@ UCS_TEST_F(test_gaudi_md, memory_allocation) {
     EXPECT_NE(memh, (uct_mem_h)NULL);
     
     /* Test memory deallocation */
-    status = uct_mem_free(m_md, memh);
+    status = uct_md_mem_free(m_md, memh);
     ASSERT_UCS_OK(status);
 }
 
@@ -147,14 +123,14 @@ UCS_TEST_F(test_gaudi_md, memory_registration) {
     }
     
     uct_mem_h memh;
-    ucs_status_t status = uct_mem_reg(m_md, gaudi_ptr, size, 
-                                     UCT_MD_MEM_ACCESS_ALL, &memh);
+    ucs_status_t status = uct_md_mem_reg(m_md, gaudi_ptr, size, 
+                                        UCT_MD_MEM_ACCESS_ALL, &memh);
     ASSERT_UCS_OK(status);
     
     EXPECT_NE(memh, (uct_mem_h)NULL);
     
     /* Test memory deregistration */
-    status = uct_mem_dereg(m_md, memh);
+    status = uct_md_mem_dereg(m_md, memh);
     ASSERT_UCS_OK(status);
 }
 
@@ -165,7 +141,9 @@ UCS_TEST_F(test_gaudi_md, memory_type_detection) {
     void *host_ptr = malloc(size);
     ASSERT_NE(host_ptr, (void*)NULL);
     
-    ucs_memory_type_t mem_type = uct_md_detect_memory_type(m_md, host_ptr, size);
+    ucs_memory_type_t mem_type;
+    ucs_status_t status = uct_md_detect_memory_type(m_md, host_ptr, size, &mem_type);
+    ASSERT_UCS_OK(status);
     EXPECT_EQ(UCS_MEMORY_TYPE_HOST, mem_type);
     
     free(host_ptr);
@@ -173,7 +151,8 @@ UCS_TEST_F(test_gaudi_md, memory_type_detection) {
     /* Test Gaudi memory detection */
     void *gaudi_ptr = alloc_gaudi_memory(size);
     if (gaudi_ptr != NULL) {
-        mem_type = uct_md_detect_memory_type(m_md, gaudi_ptr, size);
+        status = uct_md_detect_memory_type(m_md, gaudi_ptr, size, &mem_type);
+        ASSERT_UCS_OK(status);
         EXPECT_EQ(UCS_MEMORY_TYPE_GAUDI, mem_type);
     }
 }
@@ -188,8 +167,8 @@ UCS_TEST_F(test_gaudi_md, remote_key_operations) {
     
     /* Register memory */
     uct_mem_h memh;
-    ucs_status_t status = uct_mem_reg(m_md, gaudi_ptr, size, 
-                                     UCT_MD_MEM_ACCESS_ALL, &memh);
+    ucs_status_t status = uct_md_mem_reg(m_md, gaudi_ptr, size, 
+                                        UCT_MD_MEM_ACCESS_ALL, &memh);
     ASSERT_UCS_OK(status);
     
     /* Pack remote key */
@@ -199,16 +178,16 @@ UCS_TEST_F(test_gaudi_md, remote_key_operations) {
     EXPECT_NE(rkey_buffer, (void*)NULL);
     
     /* Unpack remote key */
-    uct_rkey_t rkey;
-    status = uct_rkey_unpack(&uct_gaudi_copy_component, rkey_buffer, &rkey);
+    uct_rkey_bundle_t rkey_bundle;
+    status = uct_rkey_unpack(&uct_gaudi_copy_component, rkey_buffer, &rkey_bundle);
     ASSERT_UCS_OK(status);
     
     /* Release remote key */
-    status = uct_rkey_release(&uct_gaudi_copy_component, rkey, rkey_buffer);
+    status = uct_rkey_release(&uct_gaudi_copy_component, &rkey_bundle);
     ASSERT_UCS_OK(status);
     
     /* Deregister memory */
-    status = uct_mem_dereg(m_md, memh);
+    status = uct_md_mem_dereg(m_md, memh);
     ASSERT_UCS_OK(status);
 }
 
@@ -220,10 +199,21 @@ UCS_TEST_F(test_gaudi_md, memory_advise) {
         UCS_TEST_SKIP_R("Failed to allocate Gaudi memory");
     }
     
+    /* Register memory first */
+    uct_mem_h memh;
+    ucs_status_t status = uct_md_mem_reg(m_md, gaudi_ptr, size, 
+                                        UCT_MD_MEM_ACCESS_ALL, &memh);
+    if (status != UCS_OK) {
+        UCS_TEST_SKIP_R("Failed to register Gaudi memory");
+    }
+    
     /* Test memory advise (should succeed or be unsupported) */
-    ucs_status_t status = uct_mem_advise(m_md, gaudi_ptr, size, 
-                                        UCT_MADV_WILLNEED);
+    status = uct_md_mem_advise(m_md, memh, gaudi_ptr, size, UCT_MADV_WILLNEED);
     EXPECT_TRUE((status == UCS_OK) || (status == UCS_ERR_UNSUPPORTED));
+    
+    /* Deregister memory */
+    status = uct_md_mem_dereg(m_md, memh);
+    ASSERT_UCS_OK(status);
 }
 
 UCS_TEST_F(test_gaudi_md, component_query) {
@@ -324,3 +314,29 @@ UCS_TEST_F(test_gaudi_system_device, md_resource_query) {
     
     ucs_free(md_resources);
 }
+
+// Test instantiation
+static std::vector<test_md_param> gaudi_md_params() {
+    std::vector<test_md_param> params;
+    
+    uct_md_resource_desc_t *md_resources;
+    unsigned num_md_resources;
+    
+    ucs_status_t status = uct_gaudi_base_query_md_resources(&uct_gaudi_copy_component,
+                                                          &md_resources, 
+                                                          &num_md_resources);
+    if (status == UCS_OK && num_md_resources > 0) {
+        for (unsigned i = 0; i < num_md_resources; ++i) {
+            test_md_param param;
+            param.component = &uct_gaudi_copy_component;
+            param.md_name = md_resources[i].md_name;
+            params.push_back(param);
+        }
+        ucs_free(md_resources);
+    }
+    
+    return params;
+}
+
+INSTANTIATE_TEST_SUITE_P(gaudi_md, test_gaudi_md,
+                         ::testing::ValuesIn(gaudi_md_params()));
