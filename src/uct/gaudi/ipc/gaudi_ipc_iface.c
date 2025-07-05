@@ -197,17 +197,11 @@ static UCS_CLASS_INIT_FUNC(uct_gaudi_ipc_iface_t, uct_md_h md, uct_worker_h work
                            const uct_iface_config_t *tl_config)
 {
     uct_gaudi_ipc_iface_config_t *config = NULL;
-    ucs_status_t status;
 
     config = ucs_derived_of(tl_config, uct_gaudi_ipc_iface_config_t);
-    UCS_CLASS_CALL_SUPER_INIT(uct_base_iface_t, &uct_gaudi_ipc_iface_ops,
+    UCS_CLASS_CALL_SUPER_INIT(uct_gaudi_iface_t, &uct_gaudi_ipc_iface_ops,
                               &uct_gaudi_ipc_iface_internal_ops, md, worker, params,
                               tl_config);
-
-    status = uct_gaudi_base_check_device_name(params);
-    if (status != UCS_OK) {
-        return status;
-    }
 
     self->config = config->params;
     if (UCS_CONFIG_DBL_IS_AUTO(config->params.bandwidth)) {

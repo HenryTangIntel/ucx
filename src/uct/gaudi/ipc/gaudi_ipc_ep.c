@@ -95,10 +95,6 @@ uct_gaudi_ipc_post_gaudi_async_copy(uct_ep_h tl_ep, uint64_t remote_addr,
         memcpy(dst, src, iov[0].length);
         status = UCS_OK;
     }
-        status = UCS_OK;
-    }
-        status = UCS_OK;
-    }
 
 out:
     return status;

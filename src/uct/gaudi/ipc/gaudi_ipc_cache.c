@@ -16,6 +16,22 @@
 #include <ucs/sys/ptr_arith.h>
 #include <ucs/datastruct/khash.h>
 
+/* Conditional hlthunk function declarations and stubs */
+#ifndef HAVE_HLTHUNK_IPC_HANDLE_CLOSE
+static inline int hlthunk_ipc_handle_close(uint64_t handle) {
+    ucs_warn("hlthunk_ipc_handle_close not available, using stub");
+    return 0; /* Stub implementation */
+}
+#endif
+
+#ifndef HAVE_HLTHUNK_IPC_HANDLE_MAP
+static inline int hlthunk_ipc_handle_map(uint64_t memh, void **mapped_addr) {
+    ucs_warn("hlthunk_ipc_handle_map not available, using stub");
+    *mapped_addr = NULL;
+    return -1; /* Stub implementation indicating failure */
+}
+#endif
+
 
 typedef struct uct_gaudi_ipc_cache_hash_key {
     pid_t    pid;
