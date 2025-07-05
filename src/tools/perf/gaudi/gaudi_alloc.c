@@ -25,7 +25,7 @@ typedef enum {
 } memory_location_t;
 
 /* Simplified DMA direction enum based on hlthunk test patterns */
-typedef enum {
+typedef enum hltests_dma_direction {
     DMA_DIR_HOST_TO_DRAM,
     DMA_DIR_DRAM_TO_HOST,
     DMA_DIR_DRAM_TO_DRAM,

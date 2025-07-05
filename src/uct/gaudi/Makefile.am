@@ -17,29 +17,31 @@ libuct_gaudi_la_LIBADD   = $(top_builddir)/src/ucs/libucs.la \
 libuct_gaudi_la_SOURCES = \
 	base/gaudi_iface.c \
 	base/gaudi_md.c \
+	base/gaudi_dma.c \
 	copy/gaudi_copy_md.c \
 	copy/gaudi_copy_iface.c \
-	copy/gaudi_copy_ep.c
-#	ipc/gaudi_ipc_md.c \
-#	ipc/gaudi_ipc_iface.c \
-#	ipc/gaudi_ipc_ep.c \
-#	ipc/gaudi_ipc_cache.c
+	copy/gaudi_copy_ep.c \
+	ipc/gaudi_ipc_md.c \
+	ipc/gaudi_ipc_iface.c \
+	ipc/gaudi_ipc_ep.c \
+	ipc/gaudi_ipc_cache.c
 
 noinst_HEADERS = \
 	base/gaudi_md.h \
 	base/gaudi_iface.h \
+	base/gaudi_dma.h \
 	copy/gaudi_copy_md.h \
 	copy/gaudi_copy_iface.h \
 	copy/gaudi_copy_ep.h \
 	base/gaudi.h \
 	base/gaudi_md.h \
-	copy/gaudi_copy.h
-#	ipc/gaudi_ipc_md.h \
-#	ipc/gaudi_ipc_iface.h \
-#	ipc/gaudi_ipc_ep.h \
-#	ipc/gaudi_ipc_cache.h \
-#	ipc/gaudi_ipc.inl \
-#	ipc/gaudi_ipc.h
+	copy/gaudi_copy.h \
+	ipc/gaudi_ipc_md.h \
+	ipc/gaudi_ipc_iface.h \
+	ipc/gaudi_ipc_ep.h \
+	ipc/gaudi_ipc_cache.h \
+	ipc/gaudi_ipc.inl \
+	ipc/gaudi_ipc.h
 
 PKG_CONFIG_NAME=gaudi
 

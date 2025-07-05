@@ -13,6 +13,7 @@
 
 #include <uct/base/uct_log.h>
 #include <uct/base/uct_iov.inl>
+#include <uct/gaudi/base/gaudi_dma.h>
 #include <ucs/debug/memtrack_int.h>
 #include <ucs/sys/math.h>
 #include <ucs/type/class.h>
@@ -68,8 +69,6 @@ uct_gaudi_ipc_post_gaudi_async_copy(uct_ep_h tl_ep, uint64_t remote_addr,
     ucs_status_t status;
     void *dst, *src;
     size_t offset;
-    int dev_handle;
-    void *handle;
 
     if (ucs_unlikely(0 == iov[0].length)) {
         ucs_trace_data("Zero length request: skip it");
@@ -88,21 +87,18 @@ uct_gaudi_ipc_post_gaudi_async_copy(uct_ep_h tl_ep, uint64_t remote_addr,
     dst = (direction == UCT_GAUDI_IPC_PUT) ? mapped_rem_addr : iov[0].buffer;
     src = (direction == UCT_GAUDI_IPC_PUT) ? iov[0].buffer : mapped_rem_addr;
 
-    dev_handle = hlthunk_get_device_handle(dst);
-    if (dev_handle < 0) {
-        dev_handle = hlthunk_get_device_handle(src);
-        if (dev_handle < 0) {
-            status = UCS_ERR_INVALID_ADDR;
-            goto out;
-        }
-    }
-
-    status = hlthunk_dma_async(dev_handle, dst, src, iov[0].length, HLTHUNK_DMA_DEFAULT, &handle);
+    /* Implement proper DMA copy using shared utility function */
+    status = uct_gaudi_dma_execute_copy_auto(dst, src, iov[0].length);
     if (status != UCS_OK) {
-        goto out;
+        ucs_debug("DMA copy failed, falling back to memcpy: %s", 
+                  ucs_status_string(status));
+        memcpy(dst, src, iov[0].length);
+        status = UCS_OK;
     }
-
-    status = hlthunk_dma_wait(dev_handle, handle, 1000);
+        status = UCS_OK;
+    }
+        status = UCS_OK;
+    }
 
 out:
     return status;

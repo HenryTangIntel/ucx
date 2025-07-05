@@ -14,12 +14,15 @@
 #include <uct/base/uct_log.h>
 #include <uct/base/uct_iov.inl>
 #include <uct/gaudi/base/gaudi_md.h>
+#include <uct/gaudi/base/gaudi_dma.h>
 #include <ucs/profile/profile.h>
 #include <ucs/debug/memtrack_int.h>
 #include <ucs/sys/math.h>
 #include <ucs/type/class.h>
 #include <ucs/memory/memtype_cache.h>
 #include <string.h>
+#include <sys/mman.h>
+#include <unistd.h>
 
 
 static UCS_CLASS_INIT_FUNC(uct_gaudi_copy_ep_t, const uct_ep_params_t *params)
@@ -52,13 +55,9 @@ uct_gaudi_copy_post_gaudi_async_copy(uct_ep_h tl_ep, void *dst, void *src,
     if (!length) {
         return UCS_OK;
     }
-
-    /* For now, use simple memcpy. TODO: Implement proper Gaudi device copy
-     * using hlthunk command buffers and DMA engines when device memory
-     * addresses are provided. */
-    memcpy(dst, src, length);
     
-    return UCS_OK;
+    /* Use the auto-detect DMA copy function from shared utility */
+    return uct_gaudi_dma_execute_copy_auto(dst, src, length);
 }
 
 UCS_PROFILE_FUNC(ucs_status_t, uct_gaudi_copy_ep_get_zcopy,

@@ -62,6 +62,10 @@ static ucs_status_t uct_gaudi_copy_md_mem_query(uct_md_h uct_md, const void *add
                                                size_t length,
                                                uct_md_mem_attr_t *mem_attr_p);
 
+static uct_gaudi_mem_t* 
+uct_gaudi_copy_find_memh_by_address(uct_gaudi_copy_md_t *md, 
+                                   const void *address, size_t length);
+
 /* Dummy memh for already registered memory */
 static struct {} uct_gaudi_dummy_memh;
 
@@ -93,6 +97,33 @@ static int uct_gaudi_copy_get_dmabuf_fd(uct_mem_h memh)
     
     gaudi_memh = (uct_gaudi_mem_t *)memh;
     return gaudi_memh->dmabuf_fd;
+}
+
+/**
+ * @brief Find memory handle by address range
+ */
+static uct_gaudi_mem_t* 
+uct_gaudi_copy_find_memh_by_address(uct_gaudi_copy_md_t *md, 
+                                   const void *address, size_t length)
+{
+    uct_gaudi_mem_t *gaudi_memh;
+    uintptr_t addr_start = (uintptr_t)address;
+    uintptr_t addr_end = addr_start + length;
+    
+    ucs_recursive_spin_lock(&md->memh_lock);
+    ucs_list_for_each(gaudi_memh, &md->memh_list, list) {
+        uintptr_t memh_start = (uintptr_t)gaudi_memh->vaddr;
+        uintptr_t memh_end = memh_start + gaudi_memh->size;
+        
+        /* Check if the queried address range overlaps with this memory handle */
+        if (addr_start >= memh_start && addr_end <= memh_end) {
+            ucs_recursive_spin_unlock(&md->memh_lock);
+            return gaudi_memh;
+        }
+    }
+    ucs_recursive_spin_unlock(&md->memh_lock);
+    
+    return NULL;
 }
 
 
@@ -205,6 +236,12 @@ ucs_status_t uct_gaudi_copy_mem_alloc(uct_md_h md, size_t *length_p,
     gaudi_memh->handle = handle;
     gaudi_memh->dev_addr = addr;
     gaudi_memh->dmabuf_fd = -1;
+    
+    /* Add to tracking list */
+    ucs_recursive_spin_lock(&gaudi_md->memh_lock);
+    ucs_list_add_tail(&gaudi_md->memh_list, &gaudi_memh->list);
+    ucs_recursive_spin_unlock(&gaudi_md->memh_lock);
+    
     ucs_trace("Allocated Gaudi memory handle %p, size %zu, dev addr 0x%lx",
               gaudi_memh, *length_p, gaudi_memh->dev_addr);
 
@@ -231,6 +268,11 @@ ucs_status_t uct_gaudi_copy_mem_free(uct_md_h md, uct_mem_h memh)
 {
     uct_gaudi_mem_t *gaudi_memh = memh;
     uct_gaudi_copy_md_t *gaudi_md = ucs_derived_of(md, uct_gaudi_copy_md_t);
+    
+    /* Remove from tracking list */
+    ucs_recursive_spin_lock(&gaudi_md->memh_lock);
+    ucs_list_del(&gaudi_memh->list);
+    ucs_recursive_spin_unlock(&gaudi_md->memh_lock);
     
     /* Close DMA-BUF file descriptor if it was created */
     if (gaudi_memh->dmabuf_fd >= 0) {
@@ -259,15 +301,13 @@ uct_gaudi_copy_md_query_attributes(const uct_gaudi_copy_md_t *md,
     args.return_pointer = (uintptr_t)&hw_ip;
     args.return_size = sizeof(hw_ip);
 
-    /* TODO: find a way to get the device index */
-    /* if (hlthunk_get_info(md->super.component->md_index, &args)) { */
-    if (hlthunk_get_info(0, &args)) {
+    /* Use the device index from the MD instead of hard-coding 0 */
+    if (hlthunk_get_info(md->hlthunk_fd, &args)) {
         return UCS_ERR_INVALID_ADDR;
     }
 
     mem_info->type         = UCS_MEMORY_TYPE_GAUDI;
-    /* mem_info->sys_dev      = md->super.component->md_index; */
-    mem_info->sys_dev      = 0;
+    mem_info->sys_dev      = md->device_index;
     mem_info->base_address = (void*)hw_ip.dram_base_address;
     mem_info->alloc_length = hw_ip.dram_size;
 
@@ -329,7 +369,7 @@ uct_gaudi_copy_md_mem_query(uct_md_h tl_md, const void *address, size_t length,
 
     if (mem_attr->field_mask & UCT_MD_MEM_ATTR_FIELD_DMABUF_FD) {
         /* Try to find if this memory region was allocated/registered with DMA-BUF support */
-        uct_mem_h memh = NULL; /* TODO: Need to track allocated memory handles */
+        uct_gaudi_mem_t *memh = uct_gaudi_copy_find_memh_by_address(md, address, length);
         if (memh && uct_gaudi_copy_has_dmabuf_for_ib(memh)) {
             mem_attr->dmabuf_fd = uct_gaudi_copy_get_dmabuf_fd(memh);
         } else {
@@ -365,6 +405,24 @@ UCS_PROFILE_FUNC(ucs_status_t, uct_gaudi_copy_md_detect_memory_type,
 
 static void uct_gaudi_copy_md_close(uct_md_h uct_md) {
     uct_gaudi_copy_md_t *md = ucs_derived_of(uct_md, uct_gaudi_copy_md_t);
+    uct_gaudi_mem_t *gaudi_memh, *tmp;
+
+    /* Clean up any remaining memory handles */
+    ucs_recursive_spin_lock(&md->memh_lock);
+    ucs_list_for_each_safe(gaudi_memh, tmp, &md->memh_list, list) {
+        ucs_list_del(&gaudi_memh->list);
+        ucs_warn("Cleaning up unreleased memory handle %p", gaudi_memh);
+        if (gaudi_memh->dmabuf_fd >= 0) {
+            close(gaudi_memh->dmabuf_fd);
+        }
+        if (gaudi_memh->handle != 0 && md->hlthunk_fd >= 0) {
+            hlthunk_device_memory_free(md->hlthunk_fd, gaudi_memh->handle);
+        }
+        ucs_free(gaudi_memh);
+    }
+    ucs_recursive_spin_unlock(&md->memh_lock);
+    
+    ucs_recursive_spinlock_destroy(&md->memh_lock);
 
     if (md->hlthunk_fd >= 0) {
         hlthunk_close(md->hlthunk_fd);
@@ -404,11 +462,17 @@ UCS_PROFILE_FUNC(ucs_status_t, uct_gaudi_copy_mem_reg,
     gaudi_memh->dev_addr = (uint64_t)address;
     gaudi_memh->dmabuf_fd = -1;
     
+    /* Add to tracking list */
+    ucs_recursive_spin_lock(&gaudi_md->memh_lock);
+    ucs_list_add_tail(&gaudi_md->memh_list, &gaudi_memh->list);
+    ucs_recursive_spin_unlock(&gaudi_md->memh_lock);
+    
     /* Export as DMA-BUF if requested and supported */
     if ((flags & UCT_MD_MEM_FLAG_FIXED) && gaudi_md->config.dmabuf_supported) {
+        int dmabuf_fd;
         /* Export host memory mapped to Gaudi as DMA-BUF for IB sharing */
-        int dmabuf_fd = hlthunk_device_mapped_memory_export_dmabuf_fd(gaudi_md->hlthunk_fd,
-                                                                    (uint64_t)address, length, 0, 0);
+        dmabuf_fd = hlthunk_device_mapped_memory_export_dmabuf_fd(gaudi_md->hlthunk_fd,
+                                                                 (uint64_t)address, length, 0, 0);
         if (dmabuf_fd >= 0) {
             gaudi_memh->dmabuf_fd = dmabuf_fd;
             ucs_debug("Exported registered memory %p as DMA-BUF fd %d for IB sharing", 
@@ -429,6 +493,7 @@ UCS_PROFILE_FUNC(ucs_status_t, uct_gaudi_copy_mem_dereg,
                  uct_md_h md, const uct_md_mem_dereg_params_t *params)
 {
     uct_gaudi_mem_t *gaudi_memh;
+    uct_gaudi_copy_md_t *gaudi_md;
     
     UCT_MD_MEM_DEREG_CHECK_PARAMS(params, 0);
     
@@ -438,6 +503,12 @@ UCS_PROFILE_FUNC(ucs_status_t, uct_gaudi_copy_mem_dereg,
     }
     
     gaudi_memh = (uct_gaudi_mem_t *)params->memh;
+    gaudi_md = ucs_derived_of(md, uct_gaudi_copy_md_t);
+    
+    /* Remove from tracking list */
+    ucs_recursive_spin_lock(&gaudi_md->memh_lock);
+    ucs_list_del(&gaudi_memh->list);
+    ucs_recursive_spin_unlock(&gaudi_md->memh_lock);
     
     /* Close DMA-BUF file descriptor if it was created */
     if (gaudi_memh->dmabuf_fd >= 0) {
@@ -446,7 +517,6 @@ UCS_PROFILE_FUNC(ucs_status_t, uct_gaudi_copy_mem_dereg,
     
     /* Free any device memory handle if it was allocated */
     if (gaudi_memh->handle != 0) {
-        uct_gaudi_copy_md_t *gaudi_md = ucs_derived_of(md, uct_gaudi_copy_md_t);
         if (gaudi_md->hlthunk_fd >= 0) {
             hlthunk_device_memory_free(gaudi_md->hlthunk_fd, gaudi_memh->handle);
         }
@@ -499,8 +569,9 @@ uct_gaudi_copy_md_open(uct_component_t *component, const char *md_name,
                       const uct_md_config_t *md_config, uct_md_h *md_p)
 {
     uct_gaudi_copy_md_t *md;
-    uct_gaudi_copy_md_config_t *config = ucs_derived_of(md_config, 
-                                                       uct_gaudi_copy_md_config_t);
+    uct_gaudi_copy_md_config_t *config;
+    
+    config = ucs_derived_of(md_config, uct_gaudi_copy_md_config_t);
 
     md = ucs_calloc(1, sizeof(uct_gaudi_copy_md_t), "uct_gaudi_copy_md_t");
     if (NULL == md) {
@@ -515,6 +586,10 @@ uct_gaudi_copy_md_open(uct_component_t *component, const char *md_name,
     md->device_index = 0; /* Default to first device */
     md->hlthunk_fd = -1;
     
+    /* Initialize memory handle tracking */
+    ucs_list_head_init(&md->memh_list);
+    ucs_recursive_spinlock_init(&md->memh_lock, 0);
+    
     /* Initialize configuration */
     md->config.dmabuf_supported = (config->enable_dmabuf != UCS_NO);
     
@@ -522,9 +597,14 @@ uct_gaudi_copy_md_open(uct_component_t *component, const char *md_name,
     md->hlthunk_fd = hlthunk_open(HLTHUNK_DEVICE_DONT_CARE, NULL);
     if (md->hlthunk_fd < 0) {
         ucs_warn("Failed to open hlthunk device, Gaudi transport will be disabled");
+        ucs_recursive_spinlock_destroy(&md->memh_lock);
         ucs_free(md);
         return UCS_ERR_NO_DEVICE;
     }
+    
+    /* Use default device index for now */
+    md->device_index = 0;
+    ucs_debug("Using default Gaudi device index: %d", md->device_index);
     
     /* Get hardware information */
     if (hlthunk_get_hw_ip_info(md->hlthunk_fd, &md->hw_info) != 0) {

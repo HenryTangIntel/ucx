@@ -9,6 +9,8 @@
 #include <uct/base/uct_md.h>
 #include <uct/gaudi/base/gaudi_md.h>
 #include <ucs/memory/memory_type.h>
+#include <ucs/datastruct/list.h>
+#include <ucs/type/spinlock.h>
 #include <hlthunk.h>
 
 /* Gaudi memory handle structure */
@@ -18,6 +20,7 @@ typedef struct uct_gaudi_mem {
     uint64_t handle;    /* Device memory handle */
     uint64_t dev_addr;  /* Device address */
     int dmabuf_fd;      /* DMA-BUF file descriptor */
+    ucs_list_link_t list; /* List linkage for tracking */
 } uct_gaudi_mem_t;
 
 /* Gaudi remote key structure */
@@ -42,6 +45,8 @@ typedef struct uct_gaudi_copy_md {
     } config;
     struct hlthunk_hw_ip_info    hw_info;         /* Hardware information */
     char                        *device_type;     /* Device type string */
+    ucs_list_link_t              memh_list;       /* List of allocated memory handles */
+    ucs_recursive_spinlock_t     memh_lock;       /* Lock for memory handle list */
 } uct_gaudi_copy_md_t;
 
 /**
