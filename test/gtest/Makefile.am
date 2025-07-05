@@ -307,7 +307,7 @@ gtest_CPPFLAGS += \
 	-I$(abs_top_srcdir)/src/uct/gaudi
 
 gtest_LDADD += \
-	$(GAUDI_LIBS) -lhlthunk \
+	$(GAUDI_LIBS) -lhl-thunk \
 	$(top_builddir)/src/uct/gaudi/libuct_gaudi.la
 endif
 

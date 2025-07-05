@@ -15,6 +15,17 @@
 
 
 ucs_status_t
+uct_gaudi_base_query_devices_common(
+        uct_md_h md, uct_device_type_t dev_type,
+        uct_tl_device_resource_t **tl_devices_p, unsigned *num_tl_devices_p)
+{
+    return uct_single_device_resource(md, md->component->name,
+                                      dev_type,
+                                      UCS_SYS_DEVICE_ID_UNKNOWN,
+                                      tl_devices_p, num_tl_devices_p);
+}
+
+ucs_status_t
 uct_gaudi_base_query_devices(uct_md_h md,
                              uct_tl_device_resource_t **tl_devices_p,
                              unsigned *num_tl_devices_p)
