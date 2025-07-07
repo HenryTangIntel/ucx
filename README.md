@@ -89,6 +89,21 @@ $ contrib/buildrpm.sh -s -b
 $ dpkg-buildpackage -us -uc
 ```
 
+### Build with Gaudi Support
+
+UCX supports Intel Gaudi accelerators with automatic detection. The build system will automatically detect and enable Gaudi support when the required headers and libraries are available on the system.
+
+```bash
+$ ./autogen.sh
+$ ./configure --with-gaudi=/usr --prefix=/where/to/install
+$ make -j8
+$ make install
+```
+
+The build system will automatically detect Gaudi when the system has:
+- Headers: `/usr/include/habanalabs/hlthunk.h`
+- Libraries: `/usr/lib/habanalabs/libhl-thunk.so`
+
 ### Build Doxygen documentation
 ```bash
 $ make docs
@@ -169,6 +184,7 @@ $ make -C test/gtest test
 * [Cray Gemini and Aries](https://www.cray.com/)
 * [CUDA](https://developer.nvidia.com/cuda-zone)
 * [ROCm](https://rocm.github.io/)
+* [Intel Gaudi](https://www.intel.com/content/www/us/en/products/details/discrete-gpus/data-center-gpu.html)
 * Shared Memory
     * posix, sysv, [cma](https://dl.acm.org/citation.cfm?id=2616532), [knem](http://knem.gforge.inria.fr/), and [xpmem](https://github.com/openucx/xpmem)
 * TCP/IP
