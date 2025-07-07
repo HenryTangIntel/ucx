@@ -67,7 +67,7 @@ protected:
     }
 };
 
-UCS_TEST_F(test_gaudi_md, query_md_attr) {
+UCS_TEST_P(test_gaudi_md, query_md_attr) {
     uct_md_attr_t md_attr;
     ucs_status_t status = uct_md_query(m_md, &md_attr);
     ASSERT_UCS_OK(status);
@@ -90,7 +90,7 @@ UCS_TEST_F(test_gaudi_md, query_md_attr) {
     EXPECT_GT(md_attr.rkey_packed_size, 0u);
 }
 
-UCS_TEST_F(test_gaudi_md, memory_allocation) {
+UCS_TEST_P(test_gaudi_md, memory_allocation) {
     size_t size = 4096;
     void *address;
     uct_mem_h memh;
@@ -113,7 +113,7 @@ UCS_TEST_F(test_gaudi_md, memory_allocation) {
     ASSERT_UCS_OK(status);
 }
 
-UCS_TEST_F(test_gaudi_md, memory_registration) {
+UCS_TEST_P(test_gaudi_md, memory_registration) {
     const size_t size = 8192;
     
     /* Allocate Gaudi memory using hlthunk directly */
@@ -134,7 +134,7 @@ UCS_TEST_F(test_gaudi_md, memory_registration) {
     ASSERT_UCS_OK(status);
 }
 
-UCS_TEST_F(test_gaudi_md, memory_type_detection) {
+UCS_TEST_P(test_gaudi_md, memory_type_detection) {
     const size_t size = 1024;
     
     /* Test host memory detection */
@@ -157,7 +157,7 @@ UCS_TEST_F(test_gaudi_md, memory_type_detection) {
     }
 }
 
-UCS_TEST_F(test_gaudi_md, remote_key_operations) {
+UCS_TEST_P(test_gaudi_md, remote_key_operations) {
     const size_t size = 2048;
     
     void *gaudi_ptr = alloc_gaudi_memory(size);
@@ -191,7 +191,7 @@ UCS_TEST_F(test_gaudi_md, remote_key_operations) {
     ASSERT_UCS_OK(status);
 }
 
-UCS_TEST_F(test_gaudi_md, memory_advise) {
+UCS_TEST_P(test_gaudi_md, memory_advise) {
     const size_t size = 4096;
     
     void *gaudi_ptr = alloc_gaudi_memory(size);
@@ -216,7 +216,7 @@ UCS_TEST_F(test_gaudi_md, memory_advise) {
     ASSERT_UCS_OK(status);
 }
 
-UCS_TEST_F(test_gaudi_md, component_query) {
+UCS_TEST_P(test_gaudi_md, component_query) {
     uct_component_attr_t attr;
     attr.field_mask = UCT_COMPONENT_ATTR_FIELD_NAME |
                       UCT_COMPONENT_ATTR_FIELD_MD_RESOURCE_COUNT;

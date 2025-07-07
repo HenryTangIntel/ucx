@@ -23,6 +23,8 @@ struct uct_gaudi_ipc_cache_region {
     uct_gaudi_ipc_rkey_t     key;
     void                    *mapped_addr;
     uint64_t                refcount;
+    uint32_t                channel_id;       /* Associated custom channel */
+    bool                    is_channel_mapped; /* Whether using channel mapping */
 };
 
 
@@ -43,6 +45,9 @@ void uct_gaudi_ipc_destroy_cache(uct_gaudi_ipc_cache_t *cache);
 ucs_status_t
 uct_gaudi_ipc_map_memhandle(uct_gaudi_ipc_rkey_t *key, void **mapped_addr);
 
+ucs_status_t
+uct_gaudi_ipc_map_memhandle_channel(uct_gaudi_ipc_rkey_t *key, void **mapped_addr,
+                                    uct_gaudi_ipc_md_t *md);
 
 ucs_status_t uct_gaudi_ipc_unmap_memhandle(pid_t pid, uintptr_t d_bptr,
                                           void *mapped_addr);

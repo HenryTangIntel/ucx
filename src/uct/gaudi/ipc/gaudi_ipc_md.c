@@ -9,6 +9,7 @@
 #include "gaudi_ipc_md.h"
 #include "gaudi_ipc_cache.h"
 #include "gaudi_ipc.inl"
+#include <uct/gaudi/base/gaudi_dma.h>
 #include <string.h>
 #include <limits.h>
 #include <ucs/debug/log.h>
@@ -34,6 +35,31 @@ static inline int hlthunk_ipc_handle_create(uint64_t *handle, uint64_t base_addr
 static inline int hlthunk_ipc_handle_close(uint64_t handle) {
     ucs_warn("hlthunk_ipc_handle_close not available, using stub");
     return 0; /* Stub implementation */
+}
+#endif
+
+/* Custom channel communication functions for node-local Gaudi IPC */
+#ifndef HAVE_HLTHUNK_IPC_CHANNEL_CREATE
+static inline int hlthunk_ipc_channel_create(int src_fd, int dst_fd, uint32_t *channel_id) {
+    ucs_debug("hlthunk_ipc_channel_create not available, using fallback");
+    *channel_id = 0; /* Use default channel */
+    return 0;
+}
+#endif
+
+#ifndef HAVE_HLTHUNK_IPC_CHANNEL_COPY
+static inline int hlthunk_ipc_channel_copy(uint32_t channel_id, int src_fd, int dst_fd,
+                                           void *dst, void *src, size_t length) {
+    ucs_debug("hlthunk_ipc_channel_copy not available, using DMA fallback");
+    /* Fallback to regular DMA copy */
+    return uct_gaudi_dma_execute_copy(src_fd, dst, src, length, NULL);
+}
+#endif
+
+#ifndef HAVE_HLTHUNK_IPC_CHANNEL_DESTROY
+static inline int hlthunk_ipc_channel_destroy(uint32_t channel_id) {
+    ucs_debug("hlthunk_ipc_channel_destroy not available, using stub");
+    return 0;
 }
 #endif
 #include <ucs/type/class.h>
@@ -128,6 +154,7 @@ uct_gaudi_ipc_mkey_pack(uct_md_h md, uct_mem_h tl_memh, void *address,
 {
     uct_gaudi_ipc_rkey_t *packed = mkey_buffer;
     uct_gaudi_ipc_memh_t *memh   = tl_memh;
+    uct_gaudi_ipc_md_t *gaudi_md = ucs_derived_of(md, uct_gaudi_ipc_md_t);
     uct_gaudi_ipc_lkey_t *key;
     ucs_status_t status;
 
@@ -153,6 +180,14 @@ found:
     packed->ph     = key->ph;
     packed->d_bptr = key->d_bptr;
     packed->b_len  = key->b_len;
+    
+    /* Set channel information for node-local IPC */
+    packed->src_device_id = memh->dev_num;
+    packed->dst_device_id = 0; /* Will be determined by destination */
+    packed->channel_id = memh->channel_id;
+
+    /* Suppress unused variable warning */
+    (void)gaudi_md;
 
     return UCS_OK;
 }
@@ -201,6 +236,7 @@ uct_gaudi_ipc_mem_reg(uct_md_h md, void *address, size_t length,
 
     memh->dev_num = -1;
     memh->pid     = getpid();
+    memh->channel_id = 0; /* Will be set when channel is created */
     ucs_list_head_init(&memh->list);
 
     *memh_p = memh;
@@ -226,7 +262,145 @@ uct_gaudi_ipc_mem_dereg(uct_md_h md, const uct_md_mem_dereg_params_t *params)
 
 static void uct_gaudi_ipc_md_close(uct_md_h md)
 {
-    ucs_free(md);
+    uct_gaudi_ipc_md_t *gaudi_md = ucs_derived_of(md, uct_gaudi_ipc_md_t);
+    int i;
+    
+    /* Cleanup device file descriptors */
+    if (gaudi_md->device_fds) {
+        for (i = 0; i < gaudi_md->device_count; i++) {
+            if (gaudi_md->device_fds[i] >= 0) {
+                hlthunk_close(gaudi_md->device_fds[i]);
+            }
+        }
+        ucs_free(gaudi_md->device_fds);
+    }
+    
+    /* Cleanup channel map */
+    if (gaudi_md->channel_map) {
+        ucs_free(gaudi_md->channel_map);
+    }
+    
+    pthread_mutex_destroy(&gaudi_md->channel_lock);
+    ucs_free(gaudi_md);
+}
+
+/* Custom channel management functions for node-local communication */
+ucs_status_t uct_gaudi_ipc_detect_node_devices(uct_gaudi_ipc_md_t *md)
+{
+    int device_count, i, fd;
+    
+    device_count = hlthunk_get_device_count(HLTHUNK_DEVICE_DONT_CARE);
+    if (device_count <= 0) {
+        ucs_debug("No Gaudi devices found in node");
+        return UCS_ERR_NO_DEVICE;
+    }
+    
+    md->device_count = device_count;
+    md->device_fds = ucs_calloc(device_count, sizeof(int), "gaudi_ipc_device_fds");
+    if (!md->device_fds) {
+        return UCS_ERR_NO_MEMORY;
+    }
+    
+    md->channel_map = ucs_calloc(device_count * device_count, sizeof(uint64_t), 
+                                "gaudi_ipc_channel_map");
+    if (!md->channel_map) {
+        ucs_free(md->device_fds);
+        return UCS_ERR_NO_MEMORY;
+    }
+    
+    /* Open file descriptors for all devices in the node */
+    for (i = 0; i < device_count; i++) {
+        fd = hlthunk_open(HLTHUNK_DEVICE_DONT_CARE, NULL);
+        if (fd < 0) {
+            ucs_debug("Failed to open Gaudi device %d for IPC", i);
+            md->device_fds[i] = -1;
+        } else {
+            md->device_fds[i] = fd;
+            ucs_debug("Opened Gaudi device %d with fd %d for IPC", i, fd);
+        }
+    }
+    
+    pthread_mutex_init(&md->channel_lock, NULL);
+    
+    ucs_debug("Detected %d Gaudi devices for node-local IPC", device_count);
+    return UCS_OK;
+}
+
+ucs_status_t uct_gaudi_ipc_channel_create(uct_gaudi_ipc_md_t *md, 
+                                          uint32_t src_device, uint32_t dst_device,
+                                          uint32_t *channel_id)
+{
+    uint64_t channel_key;
+    int rc;
+    
+    if (src_device >= md->device_count || dst_device >= md->device_count) {
+        return UCS_ERR_INVALID_PARAM;
+    }
+    
+    if (md->device_fds[src_device] < 0 || md->device_fds[dst_device] < 0) {
+        return UCS_ERR_NO_DEVICE;
+    }
+    
+    pthread_mutex_lock(&md->channel_lock);
+    
+    /* Check if channel already exists */
+    channel_key = md->channel_map[src_device * md->device_count + dst_device];
+    if (channel_key != 0) {
+        *channel_id = (uint32_t)channel_key;
+        pthread_mutex_unlock(&md->channel_lock);
+        return UCS_OK;
+    }
+    
+    /* Create new custom channel between devices */
+    rc = hlthunk_ipc_channel_create(md->device_fds[src_device], 
+                                   md->device_fds[dst_device], 
+                                   channel_id);
+    if (rc == 0) {
+        md->channel_map[src_device * md->device_count + dst_device] = *channel_id;
+        ucs_debug("Created IPC channel %u between Gaudi devices %u -> %u", 
+                  *channel_id, src_device, dst_device);
+    }
+    
+    pthread_mutex_unlock(&md->channel_lock);
+    
+    return (rc == 0) ? UCS_OK : UCS_ERR_IO_ERROR;
+}
+
+ucs_status_t uct_gaudi_ipc_channel_destroy(uct_gaudi_ipc_md_t *md, 
+                                           uint32_t channel_id)
+{
+    int rc;
+    
+    pthread_mutex_lock(&md->channel_lock);
+    
+    rc = hlthunk_ipc_channel_destroy(channel_id);
+    if (rc == 0) {
+        /* Clear channel from map */
+        int i, j;
+        for (i = 0; i < md->device_count; i++) {
+            for (j = 0; j < md->device_count; j++) {
+                if (md->channel_map[i * md->device_count + j] == channel_id) {
+                    md->channel_map[i * md->device_count + j] = 0;
+                }
+            }
+        }
+    }
+    
+    pthread_mutex_unlock(&md->channel_lock);
+    
+    return (rc == 0) ? UCS_OK : UCS_ERR_IO_ERROR;
+}
+
+ucs_status_t uct_gaudi_ipc_channel_copy(uct_gaudi_ipc_md_t *md,
+                                        uint32_t channel_id,
+                                        void *dst, void *src, size_t length)
+{
+    int rc;
+    
+    /* Use custom channel for high-performance node-local copy */
+    rc = hlthunk_ipc_channel_copy(channel_id, -1, -1, dst, src, length);
+    
+    return (rc == 0) ? UCS_OK : UCS_ERR_IO_ERROR;
 }
 
 static ucs_status_t
@@ -247,6 +421,7 @@ uct_gaudi_ipc_md_open(uct_component_t *component, const char *md_name,
         .detect_memory_type = (uct_md_detect_memory_type_func_t)ucs_empty_function_return_unsupported
     };
     uct_gaudi_ipc_md_t* md;
+    ucs_status_t status;
 
     md = ucs_calloc(1, sizeof(*md), "uct_gaudi_ipc_md");
     if (md == NULL) {
@@ -255,7 +430,15 @@ uct_gaudi_ipc_md_open(uct_component_t *component, const char *md_name,
 
     md->super.ops       = &md_ops;
     md->super.component = &uct_gaudi_ipc_component.super;
-    *md_p               = &md->super;
+    
+    /* Initialize device detection and channel infrastructure */
+    status = uct_gaudi_ipc_detect_node_devices(md);
+    if (status != UCS_OK) {
+        ucs_debug("Failed to detect node devices, IPC will use fallback mode");
+        /* Continue with limited functionality */
+    }
+    
+    *md_p = &md->super;
 
     return UCS_OK;
 }

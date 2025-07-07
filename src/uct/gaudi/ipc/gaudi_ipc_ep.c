@@ -64,6 +64,8 @@ uct_gaudi_ipc_post_gaudi_async_copy(uct_ep_h tl_ep, uint64_t remote_addr,
                                   uct_completion_t *comp, int direction)
 {
     uct_gaudi_ipc_unpacked_rkey_t *key = (uct_gaudi_ipc_unpacked_rkey_t *)rkey;
+    uct_gaudi_ipc_iface_t *iface = ucs_derived_of(tl_ep->iface, uct_gaudi_ipc_iface_t);
+    uct_gaudi_ipc_md_t *md = ucs_derived_of(iface->super.super.md, uct_gaudi_ipc_md_t);
     void *mapped_rem_addr;
     void *mapped_addr;
     ucs_status_t status;
@@ -75,9 +77,14 @@ uct_gaudi_ipc_post_gaudi_async_copy(uct_ep_h tl_ep, uint64_t remote_addr,
         return UCS_OK;
     }
 
-    status = uct_gaudi_ipc_map_memhandle(&key->super, &mapped_addr);
+    /* Try custom channel mapping first for node-local communication */
+    status = uct_gaudi_ipc_map_memhandle_channel(&key->super, &mapped_addr, md);
     if (ucs_unlikely(status != UCS_OK)) {
-        goto out;
+        /* Fallback to traditional IPC handle mapping */
+        status = uct_gaudi_ipc_map_memhandle(&key->super, &mapped_addr);
+        if (ucs_unlikely(status != UCS_OK)) {
+            goto out;
+        }
     }
 
     offset          = (uintptr_t)remote_addr - (uintptr_t)key->super.d_bptr;
@@ -86,6 +93,16 @@ uct_gaudi_ipc_post_gaudi_async_copy(uct_ep_h tl_ep, uint64_t remote_addr,
 
     dst = (direction == UCT_GAUDI_IPC_PUT) ? mapped_rem_addr : iov[0].buffer;
     src = (direction == UCT_GAUDI_IPC_PUT) ? iov[0].buffer : mapped_rem_addr;
+
+    /* Use custom channel copy if available and channel ID is valid */
+    if (key->super.channel_id != 0 && md && md->device_count > 0) {
+        status = uct_gaudi_ipc_channel_copy(md, key->super.channel_id, dst, src, iov[0].length);
+        if (status == UCS_OK) {
+            ucs_trace("Gaudi IPC: Used custom channel %u for copy", key->super.channel_id);
+            goto out;
+        }
+        /* Fall through to DMA copy if channel copy fails */
+    }
 
     /* Implement proper DMA copy using shared utility function */
     status = uct_gaudi_dma_execute_copy_auto(dst, src, iov[0].length);

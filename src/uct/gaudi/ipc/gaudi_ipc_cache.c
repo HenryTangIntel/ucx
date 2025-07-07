@@ -325,6 +325,8 @@ UCS_PROFILE_FUNC(ucs_status_t, uct_gaudi_ipc_map_memhandle,
     region->key         = *key;
     region->mapped_addr = *mapped_addr;
     region->refcount    = 1;
+    region->channel_id  = key->channel_id;
+    region->is_channel_mapped = false; /* Traditional handle mapping */
 
     status = UCS_PROFILE_CALL(ucs_pgtable_insert,
                               &cache->pgtable, &region->super);
@@ -420,4 +422,108 @@ UCS_STATIC_CLEANUP {
     })
     kh_destroy_inplace(gaudi_ipc_rem_cache, &uct_gaudi_ipc_remote_cache.hash);
     ucs_recursive_spinlock_destroy(&uct_gaudi_ipc_remote_cache.lock);
+}
+
+UCS_PROFILE_FUNC(ucs_status_t, uct_gaudi_ipc_map_memhandle_channel,
+                 (key, mapped_addr, md),
+                 uct_gaudi_ipc_rkey_t *key, void **mapped_addr, uct_gaudi_ipc_md_t *md)
+{
+    uct_gaudi_ipc_cache_t *cache;
+    ucs_status_t status;
+    ucs_pgt_region_t *pgt_region;
+    uct_gaudi_ipc_cache_region_t *region;
+    uint32_t channel_id;
+    int ret;
+
+    /* Check if we can use custom channels for node-local communication */
+    if (!md || key->src_device_id >= md->device_count || 
+        md->device_fds[key->src_device_id] < 0) {
+        /* Fallback to traditional IPC handle mapping */
+        return uct_gaudi_ipc_map_memhandle(key, mapped_addr);
+    }
+
+    status = uct_gaudi_ipc_get_remote_cache(key->pid, &cache);
+    if (status != UCS_OK) {
+        return status;
+    }
+
+    pthread_rwlock_wrlock(&cache->lock);
+    pgt_region = UCS_PROFILE_CALL(ucs_pgtable_lookup,
+                                  &cache->pgtable, (uintptr_t)key->d_bptr);
+    if (ucs_likely(pgt_region != NULL)) {
+        region = ucs_derived_of(pgt_region, uct_gaudi_ipc_cache_region_t);
+
+        if (key->channel_id == region->key.channel_id && region->is_channel_mapped) {
+            /* Cache hit for channel-based mapping */
+            ucs_trace("%s: gaudi_ipc channel cache hit addr:%p channel:%u region:"
+                      UCS_PGT_REGION_FMT, cache->name, (void *)key->d_bptr,
+                      key->channel_id, UCS_PGT_REGION_ARG(&region->super));
+
+            *mapped_addr = region->mapped_addr;
+            ucs_assert(region->refcount < UINT64_MAX);
+            region->refcount++;
+            pthread_rwlock_unlock(&cache->lock);
+            return UCS_OK;
+        }
+    }
+
+    /* Create or get the custom channel for this device pair */
+    status = uct_gaudi_ipc_channel_create(md, key->src_device_id, key->dst_device_id, &channel_id);
+    if (status != UCS_OK) {
+        pthread_rwlock_unlock(&cache->lock);
+        /* Fallback to traditional IPC */
+        return uct_gaudi_ipc_map_memhandle(key, mapped_addr);
+    }
+
+    /* For custom channels, the "mapped_addr" is the same as the original device pointer */
+    /* since we use direct device-to-device communication */
+    *mapped_addr = key->d_bptr;
+
+    /* Create new cache entry for channel-based mapping */
+    ret = ucs_posix_memalign((void **)&region,
+                             ucs_max(sizeof(void *), UCS_PGT_ENTRY_MIN_ALIGN),
+                             sizeof(uct_gaudi_ipc_cache_region_t),
+                             "uct_gaudi_ipc_cache_region");
+    if (ret != 0) {
+        ucs_warn("failed to allocate uct_gaudi_ipc_cache region");
+        status = UCS_ERR_NO_MEMORY;
+        goto err;
+    }
+
+    region->super.start = ucs_align_down_pow2((uintptr_t)key->d_bptr,
+                                               UCS_PGT_ADDR_ALIGN);
+    region->super.end   = ucs_align_up_pow2  ((uintptr_t)key->d_bptr + key->b_len,
+                                               UCS_PGT_ADDR_ALIGN);
+    region->key         = *key;
+    region->mapped_addr = *mapped_addr;
+    region->refcount    = 1;
+    region->channel_id  = channel_id;
+    region->is_channel_mapped = true; /* Using custom channel */
+
+    status = UCS_PROFILE_CALL(ucs_pgtable_insert,
+                              &cache->pgtable, &region->super);
+    if (status == UCS_ERR_ALREADY_EXISTS) {
+        /* Overlapped region - remove and try insert */
+        uct_gaudi_ipc_cache_invalidate_regions(cache,
+                                              (void *)region->super.start,
+                                              (void *)region->super.end);
+        status = UCS_PROFILE_CALL(ucs_pgtable_insert,
+                                  &cache->pgtable, &region->super);
+    }
+    if (status != UCS_OK) {
+        ucs_error("%s: failed to insert channel region:"UCS_PGT_REGION_FMT" size:%lu :%s",
+                  cache->name, UCS_PGT_REGION_ARG(&region->super), key->b_len,
+                  ucs_status_string(status));
+        ucs_free(region);
+        goto err;
+    }
+
+    ucs_trace("%s: gaudi_ipc channel cache new region:"UCS_PGT_REGION_FMT" size:%lu channel:%u",
+              cache->name, UCS_PGT_REGION_ARG(&region->super), key->b_len, channel_id);
+
+    status = UCS_OK;
+
+err:
+    pthread_rwlock_unlock(&cache->lock);
+    return status;
 }
