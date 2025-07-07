@@ -7,7 +7,7 @@
 if HAVE_GAUDI
 
 module_LTLIBRARIES      = libucm_gaudi.la
-libucm_gaudi_la_CPPFLAGS = $(BASE_CPPFLAGS) $(GAUDI_CPPFLAGS)
+libucm_gaudi_la_CPPFLAGS = $(BASE_CPPFLAGS) $(GAUDI_CPPFLAGS) -I/usr/include/drm -I/usr/include/libdrm
 libucm_gaudi_la_CFLAGS   = $(BASE_CFLAGS) $(GAUDI_CFLAGS) $(LT_CFLAGS)
 libucm_gaudi_la_LIBADD   = ../libucm.la $(GAUDI_LIBS)
 libucm_gaudi_la_LDFLAGS  = $(UCM_MODULE_LDFLAGS) \
