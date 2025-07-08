@@ -200,6 +200,11 @@ ucs_status_t uct_gaudi_copy_mem_alloc(uct_md_h md, size_t *length_p,
     uct_gaudi_mem_t *gaudi_memh;
     uint64_t handle;
     uint64_t addr;
+
+    if (mem_type != UCS_MEMORY_TYPE_GAUDI) {
+        ucs_error("Invalid memory type %d for Gaudi copy MD", mem_type);
+        return UCS_ERR_UNSUPPORTED;
+    }
     
     ucs_debug("uct_gaudi_copy_mem_alloc called: length=%zu, mem_type=%d, flags=0x%x", 
               *length_p, mem_type, flags);

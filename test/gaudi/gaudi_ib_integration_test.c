@@ -86,7 +86,7 @@ static int test_gaudi_memory_with_ib_sharing(size_t buffer_size,
     }
     printf("✓ Found %d UCX components\n", num_components);
 
-    /* Find Gaudi and IB components */
+    /* Find IB component */
     uct_component_attr_t comp_attr;
     for (unsigned i = 0; i < num_components; i++) {
         memset(&comp_attr, 0, sizeof(comp_attr));
@@ -103,7 +103,7 @@ static int test_gaudi_memory_with_ib_sharing(size_t buffer_size,
         }
     }
 
-    /* Find Gaudi component (UCX v1 API) */
+    /* Find Gaudi component (prefer gaudi_copy over gaudi_ipc) */
     gaudi_component = NULL;
     for (unsigned i = 0; i < num_components; i++) {
         memset(&comp_attr, 0, sizeof(comp_attr));
@@ -112,7 +112,11 @@ static int test_gaudi_memory_with_ib_sharing(size_t buffer_size,
             if (verbose) {
                 printf("  Component %d: %s\n", i, comp_attr.name);
             }
-            if (strstr(comp_attr.name, "gaudi")) {
+            if (strstr(comp_attr.name, "gaudi_copy")) {
+                gaudi_component = components[i];
+                break; // Prefer gaudi_copy, stop searching
+            } else if (strstr(comp_attr.name, "gaudi") && gaudi_component == NULL) {
+                // Fallback: remember first gaudi component if gaudi_copy not found
                 gaudi_component = components[i];
             }
         }
@@ -209,7 +213,7 @@ static int test_gaudi_memory_with_ib_sharing(size_t buffer_size,
         if (status != UCS_OK) {
             printf("WARNING: Failed to read IB MD config: %s\n", ucs_status_string(status));
         } else {
-            status = uct_md_open(ib_component, NULL, ib_config, &ib_md);
+            status = uct_md_open(ib_component, "mlx5_0", ib_config, &ib_md);
             if (status != UCS_OK) {
                 printf("WARNING: Failed to open IB MD: %s\n", ucs_status_string(status));
             } else {
