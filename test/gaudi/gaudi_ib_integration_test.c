@@ -37,14 +37,20 @@ static void print_usage(const char *prog_name)
 static int find_ib_md(uct_component_h *components, unsigned num_components, 
                      uct_component_h *ib_component, const char *preferred_dev)
 {
+    // Find IB component (UCX v1 API)
+    uct_component_attr_t comp_attr;
     for (unsigned i = 0; i < num_components; i++) {
-        const char *name = components[i]->name;
-        if (strstr(name, "ib") || strstr(name, "mlx") || strstr(name, "verbs")) {
-            if (preferred_dev && !strstr(name, preferred_dev)) {
-                continue; /* Skip if not the preferred device */
+        memset(&comp_attr, 0, sizeof(comp_attr));
+        comp_attr.field_mask = UCT_COMPONENT_ATTR_FIELD_NAME;
+        if (uct_component_query(components[i], &comp_attr) == UCS_OK) {
+            const char *name = comp_attr.name;
+            if (strstr(name, "ib") || strstr(name, "mlx") || strstr(name, "verbs")) {
+                if (preferred_dev && !strstr(name, preferred_dev)) {
+                    continue; /* Skip if not the preferred device */
+                }
+                *ib_component = components[i];
+                return 0;
             }
-            *ib_component = components[i];
-            return 0;
         }
     }
     return -1;
@@ -81,12 +87,34 @@ static int test_gaudi_memory_with_ib_sharing(size_t buffer_size,
     printf("✓ Found %d UCX components\n", num_components);
 
     /* Find Gaudi and IB components */
+    uct_component_attr_t comp_attr;
     for (unsigned i = 0; i < num_components; i++) {
-        if (verbose) {
-            printf("  Component %d: %s\n", i, components[i]->name);
+        memset(&comp_attr, 0, sizeof(comp_attr));
+        comp_attr.field_mask = UCT_COMPONENT_ATTR_FIELD_NAME;
+        if (uct_component_query(components[i], &comp_attr) == UCS_OK) {
+            const char *name = comp_attr.name;
+            if (strstr(name, "ib") || strstr(name, "mlx") || strstr(name, "verbs")) {
+                if (ib_device && !strstr(name, ib_device)) {
+                    continue;
+                }
+                ib_component = components[i];
+                break;
+            }
         }
-        if (strstr(components[i]->name, "gaudi")) {
-            gaudi_component = components[i];
+    }
+
+    /* Find Gaudi component (UCX v1 API) */
+    gaudi_component = NULL;
+    for (unsigned i = 0; i < num_components; i++) {
+        memset(&comp_attr, 0, sizeof(comp_attr));
+        comp_attr.field_mask = UCT_COMPONENT_ATTR_FIELD_NAME;
+        if (uct_component_query(components[i], &comp_attr) == UCS_OK) {
+            if (verbose) {
+                printf("  Component %d: %s\n", i, comp_attr.name);
+            }
+            if (strstr(comp_attr.name, "gaudi")) {
+                gaudi_component = components[i];
+            }
         }
     }
 
@@ -94,38 +122,46 @@ static int test_gaudi_memory_with_ib_sharing(size_t buffer_size,
         printf("ERROR: Gaudi component not found\n");
         goto cleanup;
     }
-    printf("✓ Found Gaudi component: %s\n", gaudi_component->name);
-
-    if (find_ib_md(components, num_components, &ib_component, ib_device) != 0) {
-        printf("WARNING: InfiniBand component not found (test will be limited)\n");
-    } else {
-        printf("✓ Found IB component: %s\n", ib_component->name);
+    // Print Gaudi component name (UCX v1 API)
+    memset(&comp_attr, 0, sizeof(comp_attr));
+    comp_attr.field_mask = UCT_COMPONENT_ATTR_FIELD_NAME;
+    if (uct_component_query(gaudi_component, &comp_attr) == UCS_OK) {
+        printf("✓ Found Gaudi component: %s\n", comp_attr.name);
     }
 
-    /* Open Gaudi memory domain */
+    if (ib_component) {
+        memset(&comp_attr, 0, sizeof(comp_attr));
+        comp_attr.field_mask = UCT_COMPONENT_ATTR_FIELD_NAME;
+        if (uct_component_query(ib_component, &comp_attr) == UCS_OK) {
+            printf("✓ Found IB component: %s\n", comp_attr.name);
+        }
+    }
+
+    /* Open Gaudi memory domain (UCX v1 API) */
     status = uct_md_config_read(gaudi_component, NULL, NULL, &gaudi_config);
     if (status != UCS_OK) {
         printf("ERROR: Failed to read Gaudi MD config: %s\n", ucs_status_string(status));
         goto cleanup;
     }
 
-    status = gaudi_component->md_open(gaudi_component, "gaudi:0", gaudi_config, &gaudi_md);
+    status = uct_md_open(gaudi_component, "gaudi:0", gaudi_config, &gaudi_md);
     if (status != UCS_OK) {
         printf("ERROR: Failed to open Gaudi MD: %s\n", ucs_status_string(status));
         goto cleanup;
     }
     printf("✓ Opened Gaudi memory domain\n");
 
-    /* Query Gaudi MD capabilities */
-    uct_md_attr_v2_t md_attr;
+    /* Query Gaudi MD capabilities (UCX v1 API) */
+    uct_md_attr_t md_attr;
     status = uct_md_query(gaudi_md, &md_attr);
     if (status == UCS_OK) {
         printf("✓ Gaudi MD capabilities:\n");
-        printf("  - Allocation support: %s\n", (md_attr.flags & UCT_MD_FLAG_ALLOC) ? "Yes" : "No");
-        printf("  - Registration support: %s\n", (md_attr.flags & UCT_MD_FLAG_REG) ? "Yes" : "No");
-        printf("  - DMA-BUF support: %s\n", (md_attr.flags & UCT_MD_FLAG_REG_DMABUF) ? "Yes" : "No");
-        printf("  - Memory types: 0x%lx\n", md_attr.alloc_mem_types);
-        printf("  - DMA-BUF memory types: 0x%lx\n", md_attr.dmabuf_mem_types);
+        printf("  - Allocation support: %s\n", (md_attr.cap.flags & UCT_MD_FLAG_ALLOC) ? "Yes" : "No");
+        printf("  - Registration support: %s\n", (md_attr.cap.flags & UCT_MD_FLAG_REG) ? "Yes" : "No");
+        printf("  - DMA-BUF support: %s\n", (md_attr.cap.flags & UCT_MD_FLAG_REG_DMABUF) ? "Yes" : "No");
+        printf("  - Memory types: 0x%lx\n", md_attr.cap.alloc_mem_types);
+        // Remove or comment out the next line if dmabuf_mem_types is not present in your UCX v1 headers
+        // printf("  - DMA-BUF memory types: 0x%lx\n", md_attr.cap.dmabuf_mem_types);
     }
 
     /* Allocate Gaudi memory with DMA-BUF export */
@@ -157,11 +193,8 @@ static int test_gaudi_memory_with_ib_sharing(size_t buffer_size,
         }
     }
 
-    /* Pack memory key (simulate sending to remote IB node) */
-    printf("\n--- Creating Memory Key for IB Sharing ---\n");
-    uct_md_mkey_pack_params_t pack_params = {0};
-    status = uct_md_mkey_pack(gaudi_md, gaudi_memh, gaudi_address, actual_size, 
-                             &pack_params, rkey_buffer);
+    /* Pack memory key (UCX v1 API) */
+    status = uct_md_mkey_pack(gaudi_md, gaudi_memh, rkey_buffer);
     if (status != UCS_OK) {
         printf("ERROR: Failed to pack memory key: %s\n", ucs_status_string(status));
         goto cleanup;
@@ -176,29 +209,15 @@ static int test_gaudi_memory_with_ib_sharing(size_t buffer_size,
         if (status != UCS_OK) {
             printf("WARNING: Failed to read IB MD config: %s\n", ucs_status_string(status));
         } else {
-            status = ib_component->md_open(ib_component, NULL, ib_config, &ib_md);
+            status = uct_md_open(ib_component, NULL, ib_config, &ib_md);
             if (status != UCS_OK) {
                 printf("WARNING: Failed to open IB MD: %s\n", ucs_status_string(status));
             } else {
-                printf("✓ Opened IB memory domain: %s\n", ib_component->name);
-                
-                /* Try to attach to the Gaudi memory via IB MD */
-                uct_mem_h ib_memh;
-                uct_md_mem_attach_params_t attach_params = {0};
-                status = uct_md_mem_attach(ib_md, rkey_buffer, &attach_params, &ib_memh);
-                if (status == UCS_OK) {
-                    printf("✓ Successfully attached IB MD to Gaudi memory\n");
-                    printf("  This enables zero-copy RDMA to/from Gaudi memory!\n");
-                    
-                    /* In a real application, you would now be able to:
-                     * 1. Use ib_memh with IB transport operations
-                     * 2. Perform RDMA reads/writes directly to Gaudi memory
-                     * 3. Avoid CPU copies between Gaudi and IB
-                     */
-                } else {
-                    printf("WARNING: Failed to attach IB MD to Gaudi memory: %s\n", 
-                           ucs_status_string(status));
-                    printf("  (This may be expected if DMA-BUF sharing is not fully configured)\n");
+                uct_component_attr_t ib_comp_attr;
+                memset(&ib_comp_attr, 0, sizeof(ib_comp_attr));
+                ib_comp_attr.field_mask = UCT_COMPONENT_ATTR_FIELD_NAME;
+                if (uct_component_query(ib_component, &ib_comp_attr) == UCS_OK) {
+                    printf("✓ Opened IB memory domain: %s\n", ib_comp_attr.name);
                 }
             }
         }

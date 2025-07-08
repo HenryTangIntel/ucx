@@ -64,7 +64,7 @@ run_test() {
 }
 
 # Change to test directory
-cd /scratch2/ytang/integration/ucx/test/gaudi
+cd /workspace/ucx-develop/test/gaudi
 
 print_header "UCX Gaudi Integration Test Suite"
 

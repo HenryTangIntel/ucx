@@ -6,11 +6,13 @@
  * capabilities, and configuration options.
  */
 
+#define _GNU_SOURCE
+#include <sched.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <sched.h>
 
 #include <uct/api/uct.h>
 #include <ucp/api/ucp.h>
@@ -83,7 +85,12 @@ static int show_md_info(uct_component_h component, int verbose)
     uct_md_h md;
     uct_md_attr_t md_attr;
 
-    printf("\n=== Memory Domain Information: %s ===\n", component->name);
+    uct_component_attr_t comp_attr;
+    memset(&comp_attr, 0, sizeof(comp_attr));
+    comp_attr.field_mask = UCT_COMPONENT_ATTR_FIELD_NAME;
+    if (uct_component_query(component, &comp_attr) == UCS_OK) {
+        printf("\n=== Memory Domain Information: %s ===\n", comp_attr.name);
+    }
 
     /* Read MD configuration */
     status = uct_md_config_read(component, NULL, NULL, &md_config);
@@ -93,7 +100,7 @@ static int show_md_info(uct_component_h component, int verbose)
     }
 
     /* Open memory domain */
-    status = component->md_open(component, NULL, md_config, &md);
+    status = uct_md_open(component, NULL, md_config, &md);
     if (status != UCS_OK) {
         printf("ERROR: Failed to open MD: %s\n", ucs_status_string(status));
         uct_config_release(md_config);
@@ -108,7 +115,7 @@ static int show_md_info(uct_component_h component, int verbose)
     }
 
     /* Print MD information */
-    printf("Memory Domain: %s\n", component->name);
+    printf("Memory Domain: %s\n", comp_attr.name);
     print_md_flags("  Capabilities: ", md_attr.cap.flags);
     print_memory_types("  Allocation types: ", md_attr.cap.alloc_mem_types);
     print_memory_types("  Registration types: ", md_attr.cap.reg_mem_types);
@@ -134,21 +141,8 @@ static int show_md_info(uct_component_h component, int verbose)
     printf("  Remote key size: %zu bytes\n", md_attr.rkey_packed_size);
 
     if (verbose) {
-        printf("  Local CPUs: ");
-        int found_cpu = 0;
-        for (int i = 0; i < CPU_SETSIZE && i < 64; i++) {
-            if (CPU_ISSET(i, &md_attr.local_cpus)) {
-                if (found_cpu) printf(", ");
-                printf("%d", i);
-                found_cpu++;
-                if (found_cpu > 8) { /* Limit output */
-                    printf("...");
-                    break;
-                }
-            }
-        }
-        if (!found_cpu) printf("All");
-        printf("\n");
+        // Skipping CPU affinity print: md_attr.local_cpus is a ucs_cpu_set_t, not cpu_set_t, and there is no portable way to print it in UCX v1
+        printf("  Local CPUs: (not available in UCX v1 public API)\n");
     }
 
 cleanup:
@@ -165,7 +159,12 @@ static int show_transport_info(uct_component_h component, int verbose)
     uct_tl_resource_desc_t *tl_resources;
     unsigned num_tl_resources;
 
-    printf("\n=== Transport Information: %s ===\n", component->name);
+    uct_component_attr_t comp_attr;
+    memset(&comp_attr, 0, sizeof(comp_attr));
+    comp_attr.field_mask = UCT_COMPONENT_ATTR_FIELD_NAME;
+    if (uct_component_query(component, &comp_attr) == UCS_OK) {
+        printf("\n=== Transport Information: %s ===\n", comp_attr.name);
+    }
 
     /* Open MD first to query transport resources */
     status = uct_md_config_read(component, NULL, NULL, &md_config);
@@ -174,7 +173,7 @@ static int show_transport_info(uct_component_h component, int verbose)
         return -1;
     }
 
-    status = component->md_open(component, NULL, md_config, &md);
+    status = uct_md_open(component, NULL, md_config, &md);
     if (status != UCS_OK) {
         printf("ERROR: Failed to open MD: %s\n", ucs_status_string(status));
         uct_config_release(md_config);
@@ -214,28 +213,11 @@ static int show_transport_info(uct_component_h component, int verbose)
 
 static int show_config_info(uct_component_h component, int verbose)
 {
-    printf("\n=== Configuration Information: %s ===\n", component->name);
-    
-    printf("MD Config:\n");
-    printf("  Name: %s\n", component->md_config.name);
-    printf("  Prefix: %s\n", component->md_config.prefix);
-    printf("  Size: %zu bytes\n", component->md_config.size);
-    
-    if (verbose && component->md_config.table) {
-        printf("  Configuration options:\n");
-        ucs_config_field_t *field = component->md_config.table;
-        while (field && field->name) {
-            printf("    %s%s: %s\n", 
-                   component->md_config.prefix, 
-                   field->name,
-                   field->dfl_value ? field->dfl_value : "N/A");
-            if (field->doc) {
-                printf("      %s\n", field->doc);
-            }
-            field++;
-        }
+    printf("\n=== Configuration Information ===\n");
+    // Skipping detailed config table print: component->md_config is not available in UCX v1 public API
+    if (verbose) {
+        printf("  (Detailed configuration options not available in UCX v1 public API)\n");
     }
-    
     return 0;
 }
 
@@ -293,24 +275,29 @@ int main(int argc, char *argv[])
     /* Find and process Gaudi components */
     int found_gaudi = 0;
     for (unsigned i = 0; i < num_components; i++) {
-        if (strstr(components[i]->name, "gaudi")) {
-            found_gaudi = 1;
-            
-            printf("\n*** Gaudi Component Found: %s ***\n", components[i]->name);
-            
-            if (show_all || show_config) {
-                show_config_info(components[i], verbose);
+        uct_component_attr_t comp_attr;
+        memset(&comp_attr, 0, sizeof(comp_attr));
+        comp_attr.field_mask = UCT_COMPONENT_ATTR_FIELD_NAME;
+        if (uct_component_query(components[i], &comp_attr) == UCS_OK) {
+            if (strstr(comp_attr.name, "gaudi")) {
+                found_gaudi = 1;
+                
+                printf("\n*** Gaudi Component Found: %s ***\n", comp_attr.name);
+                
+                if (show_all || show_config) {
+                    show_config_info(components[i], verbose);
+                }
+                
+                if (show_all || show_transport) {
+                    show_transport_info(components[i], verbose);
+                }
+                
+                if (show_all || show_md) {
+                    show_md_info(components[i], verbose);
+                }
+            } else if (verbose) {
+                printf("Component %u: %s (not Gaudi)\n", i, comp_attr.name);
             }
-            
-            if (show_all || show_transport) {
-                show_transport_info(components[i], verbose);
-            }
-            
-            if (show_all || show_md) {
-                show_md_info(components[i], verbose);
-            }
-        } else if (verbose) {
-            printf("Component %u: %s (not Gaudi)\n", i, components[i]->name);
         }
     }
 

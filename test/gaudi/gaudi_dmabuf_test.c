@@ -165,7 +165,7 @@ static int test_ucx_gaudi_dmabuf(size_t buffer_size, int verbose)
     }
 
     /* Open memory domain */
-    status = gaudi_component->md_open(gaudi_component, "gaudi:0", md_config, &md);
+    status = uct_md_open(gaudi_component, "gaudi:0", md_config, &md);
     if (status != UCS_OK) {
         printf("ERROR: Failed to open Gaudi MD: %s\n", ucs_status_string(status));
         goto cleanup_config;
