@@ -43,7 +43,7 @@ ALL_LDFLAGS := $(LDFLAGS) $(UCX_LDFLAGS) $(HLTHUNK_LDFLAGS)
 ALL_LIBS := $(UCX_LIBS) $(HLTHUNK_LIBS)
 
 # Test programs
-PROGRAMS := basic_gaudi_test simple_gaudi_test gaudi_dmabuf_test gaudi_ib_integration_test ucx_gaudi_info
+PROGRAMS := basic_gaudi_test simple_gaudi_test gaudi_dmabuf_test gaudi_ib_integration_test ucx_gaudi_info gaudi_ucp_dmabuf_example
 
 # Default target
 all: $(PROGRAMS)
@@ -66,6 +66,10 @@ gaudi_ib_integration_test: gaudi_ib_integration_test.c
 
 # UCX info program for Gaudi
 ucx_gaudi_info: ucx_gaudi_info.c
+	$(CC) $(ALL_CPPFLAGS) -o $@ $< $(ALL_LDFLAGS) $(ALL_LIBS)
+
+# Gaudi UCP DMA-BUF example
+gaudi_ucp_dmabuf_example: gaudi_ucp_dmabuf_example.c
 	$(CC) $(ALL_CPPFLAGS) -o $@ $< $(ALL_LDFLAGS) $(ALL_LIBS)
 
 # Clean target
