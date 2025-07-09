@@ -50,6 +50,6 @@ ucs_status_t uct_gaudi_dma_execute_copy(int hlthunk_fd, void *dst, void *src,
  * 
  * @return UCS_OK on success, error status otherwise
  */
-ucs_status_t uct_gaudi_dma_execute_copy_auto(void *dst, void *src, size_t length);
+ucs_status_t uct_gaudi_dma_execute_copy_auto(int hlthunk_fd, void *dst, void *src, size_t length);
 
 #endif /* UCT_GAUDI_DMA_H */

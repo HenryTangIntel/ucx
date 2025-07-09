@@ -14,19 +14,19 @@ LDFLAGS :=
 
 # UCX include paths
 UCX_CPPFLAGS := -I$(UCX_ROOT)/src \
-                -I$(UCX_ROOT)/src/ucs \
-                -I$(UCX_ROOT)/src/uct \
-                -I$(UCX_ROOT)/src/ucp \
-                -I$(UCX_ROOT)
+				-I$(UCX_ROOT)/src/ucs \
+				-I$(UCX_ROOT)/src/uct \
+				-I$(UCX_ROOT)/src/ucp \
+				-I$(UCX_ROOT)
 
 # UCX library paths - try install first, then build directories
 ifeq ($(shell [ -d "$(UCX_ROOT)/install/lib" ] && echo yes),yes)
-    UCX_LDFLAGS := -L$(UCX_ROOT)/install/lib
-    UCX_CPPFLAGS += -I$(UCX_ROOT)/install/include
+	UCX_LDFLAGS := -L$(UCX_ROOT)/install/lib
+	UCX_CPPFLAGS += -I$(UCX_ROOT)/install/include
 else
-    UCX_LDFLAGS := -L$(UCX_ROOT)/src/ucs/.libs \
-                   -L$(UCX_ROOT)/src/uct/.libs \
-                   -L$(UCX_ROOT)/src/ucp/.libs
+	UCX_LDFLAGS := -L$(UCX_ROOT)/src/ucs/.libs \
+				   -L$(UCX_ROOT)/src/uct/.libs \
+				   -L$(UCX_ROOT)/src/ucp/.libs
 endif
 
 # UCX libraries
@@ -42,8 +42,13 @@ ALL_CPPFLAGS := $(CFLAGS) $(UCX_CPPFLAGS) $(HLTHUNK_CPPFLAGS) -DHAVE_CONFIG_H
 ALL_LDFLAGS := $(LDFLAGS) $(UCX_LDFLAGS) $(HLTHUNK_LDFLAGS)
 ALL_LIBS := $(UCX_LIBS) $(HLTHUNK_LIBS)
 
+
 # Test programs
-PROGRAMS := basic_gaudi_test simple_gaudi_test gaudi_dmabuf_test gaudi_ib_integration_test ucx_gaudi_info gaudi_ucp_dmabuf_example
+PROGRAMS := basic_gaudi_test simple_gaudi_test gaudi_dmabuf_test gaudi_ib_integration_test ucx_gaudi_info gaudi_ucp_dmabuf_example test_gaudi_copy_post
+# Test for uct_gaudi_copy_post_gaudi_async_copy
+test_gaudi_copy_post: test_gaudi_copy_post.c
+	$(CC) $(ALL_CPPFLAGS) -o $@ $^ \
+	  -L$(UCX_ROOT)/src/uct/gaudi/.libs $(ALL_LDFLAGS) $(ALL_LIBS) -luct_gaudi
 
 # Default target
 all: $(PROGRAMS)

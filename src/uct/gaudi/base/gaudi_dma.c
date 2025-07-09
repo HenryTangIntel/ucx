@@ -185,23 +185,3 @@ ucs_status_t uct_gaudi_dma_execute_copy(int hlthunk_fd, void *dst, void *src,
     return status;
 }
 
-ucs_status_t uct_gaudi_dma_execute_copy_auto(void *dst, void *src, size_t length)
-{
-    ucs_status_t status;
-    int hlthunk_fd;
-    
-    /* Open hlthunk device connection */
-    hlthunk_fd = hlthunk_open(HLTHUNK_DEVICE_DONT_CARE, NULL);
-    if (hlthunk_fd < 0) {
-        ucs_debug("Failed to open hlthunk device for DMA copy");
-        return UCS_ERR_NO_DEVICE;
-    }
-    
-    /* Execute DMA copy */
-    status = uct_gaudi_dma_execute_copy(hlthunk_fd, dst, src, length, NULL);
-    
-    /* Close hlthunk device */
-    hlthunk_close(hlthunk_fd);
-    
-    return status;
-}

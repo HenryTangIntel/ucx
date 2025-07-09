@@ -48,16 +48,21 @@ UCS_CLASS_DEFINE_DELETE_FUNC(uct_gaudi_copy_ep_t, uct_ep_t);
     ucs_trace_data("%s [ptr %p len %zu] to 0x%" PRIx64, _name, (_iov)->buffer, \
                    (_iov)->length, (_remote_addr))
 
-static ucs_status_t
+ucs_status_t
 uct_gaudi_copy_post_gaudi_async_copy(uct_ep_h tl_ep, void *dst, void *src,
                                    size_t length, uct_completion_t *comp)
 {
+   
+    /* Access hlthunk_fd from the Gaudi MD via iface->super.md */
+    uct_gaudi_copy_iface_t *iface = ucs_derived_of(tl_ep->iface, uct_gaudi_copy_iface_t);
+    uct_md_h md = iface->super.super.md;
+    uct_gaudi_copy_md_t *gaudi_md = ucs_derived_of(md, uct_gaudi_copy_md_t);
+    int hlthunk_fd = gaudi_md->hlthunk_fd;
     if (!length) {
         return UCS_OK;
+    } else {
+        return uct_gaudi_dma_execute_copy(hlthunk_fd, dst, src, length, NULL);
     }
-    
-    /* Use the auto-detect DMA copy function from shared utility */
-    return uct_gaudi_dma_execute_copy_auto(dst, src, length);
 }
 
 UCS_PROFILE_FUNC(ucs_status_t, uct_gaudi_copy_ep_get_zcopy,

@@ -71,6 +71,7 @@ uct_gaudi_ipc_post_gaudi_async_copy(uct_ep_h tl_ep, uint64_t remote_addr,
     ucs_status_t status;
     void *dst, *src;
     size_t offset;
+    int hlthunk_fd;
 
     if (ucs_unlikely(0 == iov[0].length)) {
         ucs_trace_data("Zero length request: skip it");
@@ -105,7 +106,8 @@ uct_gaudi_ipc_post_gaudi_async_copy(uct_ep_h tl_ep, uint64_t remote_addr,
     }
 
     /* Implement proper DMA copy using shared utility function */
-    status = uct_gaudi_dma_execute_copy_auto(dst, src, iov[0].length);
+    hlthunk_fd = (md->device_count > 0 && md->device_fds) ? md->device_fds[0] : -1;
+    status = uct_gaudi_dma_execute_copy(hlthunk_fd, dst, src, iov[0].length, NULL);
     if (status != UCS_OK) {
         ucs_debug("DMA copy failed, falling back to memcpy: %s", 
                   ucs_status_string(status));
