@@ -300,7 +300,7 @@ gtest_SOURCES += \
     uct/gaudi/test_gaudi_performance.cc \
     uct/gaudi/test_gaudi_advanced.cc \
     uct/gaudi/test_gaudi_error_handling.cc \
-    uct/gaudi/test_gaudi_integration.cc \ 
+    uct/gaudi/test_gaudi_integration.cc \
     uct/gaudi/test_gaudi_dma_comprehensive.cc \
     uct/gaudi/test_gaudi_stress.cc
 
