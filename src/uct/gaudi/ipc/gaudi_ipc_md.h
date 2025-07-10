@@ -131,6 +131,6 @@ ucs_status_t uct_gaudi_ipc_channel_copy(uct_gaudi_ipc_md_t *md,
                                         uint32_t channel_id,
                                         void *dst, void *src, size_t length);
 
-ucs_status_t uct_gaudi_ipc_detect_node_devices(uct_gaudi_ipc_md_t *md);
+
 
 #endif

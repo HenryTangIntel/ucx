@@ -70,7 +70,7 @@ static uct_gaudi_mem_t*
 uct_gaudi_copy_find_memh_by_address(uct_gaudi_copy_md_t *md, 
                                    const void *address, size_t length);
 
-static int gaudi_lookup_busid_from_env(int device_index, char *bus_id, size_t bus_id_len);
+
 
 /* Dummy memh for already registered memory */
 static struct {} uct_gaudi_dummy_memh;
@@ -132,83 +132,9 @@ uct_gaudi_copy_find_memh_by_address(uct_gaudi_copy_md_t *md,
     return NULL;
 }
 
-// Helper to open a specific Gaudi device by index
-static int open_gaudi_device_by_index(int device_index)
-{
-    char bus_id[HLTHUNK_BUS_ID_MAX_LEN];
-    int num_devices = hlthunk_get_device_count(HLTHUNK_DEVICE_DONT_CARE);
-    int env_lookup_result = -1;
-    const char *env;
-    int fd;
+// Device open/close logic moved to gaudi_md.c (base/). Use device handle from MD struct.
 
-    if (num_devices <= 0) {
-        ucs_warn("No Gaudi devices found");
-        return -1;
-    }
-    if (device_index < 0 || device_index >= num_devices) {
-        ucs_warn("Requested device index %d out of range (found %d devices)", device_index, num_devices);
-        return -1;
-    }
-
-    // Try to get bus_id from env mapping table first, only if env is set
-    env = getenv("GAUDI_MAPPING_TABLE");
-    if (env != NULL) {
-        env_lookup_result = gaudi_lookup_busid_from_env(device_index, bus_id, sizeof(bus_id));
-        if (env_lookup_result == 0) {
-            ucs_debug("Found bus ID %s for Gaudi device %d from GAUDI_MAPPING_TABLE", bus_id, device_index);
-        } else {
-            ucs_warn("Failed to find bus ID for Gaudi device %d in GAUDI_MAPPING_TABLE", device_index);
-            return -1;
-        }
-    }
-
-    fd = hlthunk_open(device_index, bus_id);
-    if (fd < 0) {
-        ucs_warn("Failed to open Gaudi device %d (busid=%s)", device_index, bus_id);
-    }
-    return fd;
-}
-
-// Returns 0 on success, -1 on failure
-static int gaudi_lookup_busid_from_env(int device_index, char *bus_id, size_t bus_id_len)
-{
-    const char *env = getenv("GAUDI_MAPPING_TABLE");
-    cJSON *root;
-    int found = 0;
-    int count, i;
-
-    if (!env) {
-        ucs_warn("GAUDI_MAPPING_TABLE not set");
-        return -1;
-    }
-
-    root = cJSON_Parse(env);
-    if (!root || !cJSON_IsArray(root)) {
-        ucs_warn("Failed to parse GAUDI_MAPPING_TABLE as JSON array");
-        if (root) cJSON_Delete(root);
-        return -1;
-    }
-
-    count = cJSON_GetArraySize(root);
-    for (i = 0; i < count; ++i) {
-        cJSON *item = cJSON_GetArrayItem(root, i);
-        cJSON *idx = cJSON_GetObjectItem(item, "index");
-        cJSON *bus = cJSON_GetObjectItem(item, "bus_id");
-        if (cJSON_IsNumber(idx) && cJSON_IsString(bus) && idx->valueint == device_index) {
-            strncpy(bus_id, bus->valuestring, bus_id_len - 1);
-            bus_id[bus_id_len - 1] = '\0';
-            found = 1;
-            break;
-        }
-    }
-    cJSON_Delete(root);
-
-    if (!found) {
-        ucs_warn("Device index %d not found in GAUDI_MAPPING_TABLE", device_index);
-        return -1;
-    }
-    return 0;
-}
+// gaudi_lookup_busid_from_env moved to gaudi_md.c (base/)
 
 ucs_status_t uct_gaudi_copy_md_query(uct_md_h md, uct_md_attr_v2_t *md_attr)
 {
@@ -690,8 +616,8 @@ uct_gaudi_copy_md_open(uct_component_t *component, const char *md_name,
     /* Initialize configuration */
     md->config.dmabuf_supported = (config->enable_dmabuf != UCS_NO);
     
-    /* Open hlthunk device */
-    md->hlthunk_fd = open_gaudi_device_by_index(md->device_index);
+    /* Open hlthunk device using MD base logic */
+    md->hlthunk_fd = uct_gaudi_md_open_device(md->device_index);
     if (md->hlthunk_fd < 0) {
         ucs_warn("Failed to open hlthunk device, Gaudi transport will be disabled");
         ucs_recursive_spinlock_destroy(&md->memh_lock);

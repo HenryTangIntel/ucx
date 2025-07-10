@@ -11,7 +11,7 @@
 #include <ucs/memory/memory_type.h>
 #include <ucs/datastruct/list.h>
 #include <ucs/type/spinlock.h>
-#include <hlthunk.h>
+
 
 /* Gaudi memory handle structure */
 typedef struct uct_gaudi_mem {
@@ -48,6 +48,8 @@ typedef struct uct_gaudi_copy_md {
     ucs_list_link_t              memh_list;       /* List of allocated memory handles */
     ucs_recursive_spinlock_t     memh_lock;       /* Lock for memory handle list */
 } uct_gaudi_copy_md_t;
+
+
 
 /**
  * gaudi_copy MD configuration.
