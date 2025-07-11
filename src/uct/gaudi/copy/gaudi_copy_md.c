@@ -15,7 +15,9 @@
 #include <stdbool.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <sys/ioctl.h>
 #include <fcntl.h>
+#include <errno.h>
 #include <ucs/debug/log.h>
 #include <ucs/sys/sys.h>
 #include <ucs/debug/memtrack_int.h>
@@ -28,6 +30,7 @@
 
 /* Habana Labs driver */
 #include <hlthunk.h>
+#include <drm/habanalabs_accel.h>
 
 #include <cjson/cJSON.h>
 
@@ -702,6 +705,131 @@ ucs_status_t uct_gaudi_copy_rcache_mem_dereg(uct_md_h md,
     uct_gaudi_copy_rcache_region_t *region = ucs_container_of(gaudi_memh, 
                                                              uct_gaudi_copy_rcache_region_t, memh);
     ucs_rcache_region_put(gaudi_md->rcache, &region->super);
+    return UCS_OK;
+}
+
+/**
+ * @brief Export device memory as DMA-BUF for device-to-device IPC
+ * 
+ * This function exports device memory as a DMA-BUF file descriptor that can be
+ * shared with other Gaudi devices for zero-copy communication.
+ */
+ucs_status_t uct_gaudi_copy_export_dmabuf(uct_md_h md, void *address, size_t length,
+                                         int *dmabuf_fd, uint64_t *dmabuf_offset)
+{
+    uct_gaudi_copy_md_t *gaudi_md = ucs_derived_of(md, uct_gaudi_copy_md_t);
+    int fd = -1;
+    
+    if (!address || !length || !dmabuf_fd) {
+        return UCS_ERR_INVALID_PARAM;
+    }
+    
+    *dmabuf_fd = -1;
+    *dmabuf_offset = 0;
+    
+    /* Try enhanced DMA-BUF API first (Gaudi2+) */
+    if (gaudi_md->config.mapped_dmabuf_supported) {
+        fd = hlthunk_device_mapped_memory_export_dmabuf_fd(
+            gaudi_md->hlthunk_fd, (uint64_t)address, length, 0, 0);
+        if (fd >= 0) {
+            *dmabuf_fd = fd;
+            *dmabuf_offset = 0;
+            UCS_STATS_UPDATE_COUNTER(gaudi_md->stats, UCT_GAUDI_COPY_STAT_DMABUF_EXPORTS, 1);
+            ucs_debug("Exported enhanced DMA-BUF fd=%d for addr=%p size=%zu", 
+                     fd, address, length);
+            return UCS_OK;
+        }
+    }
+    
+    /* Fallback to legacy DMA-BUF API */
+    fd = hlthunk_device_memory_export_dmabuf_fd(gaudi_md->hlthunk_fd, 
+                                              (uint64_t)address, length, 0);
+    if (fd >= 0) {
+        *dmabuf_fd = fd;
+        *dmabuf_offset = 0;
+        UCS_STATS_UPDATE_COUNTER(gaudi_md->stats, UCT_GAUDI_COPY_STAT_DMABUF_EXPORTS, 1);
+        ucs_debug("Exported legacy DMA-BUF fd=%d for addr=%p size=%zu", 
+                 fd, address, length);
+        return UCS_OK;
+    }
+    
+    ucs_error("Failed to export DMA-BUF for addr=%p size=%zu: %s", 
+             address, length, strerror(errno));
+    UCS_STATS_UPDATE_COUNTER(gaudi_md->stats, UCT_GAUDI_COPY_STAT_DMA_ERRORS, 1);
+    return UCS_ERR_IO_ERROR;
+}
+
+/**
+ * @brief Import DMA-BUF from another device for device-to-device IPC
+ * 
+ * This function imports a DMA-BUF file descriptor from another Gaudi device
+ * and maps it to a device virtual address for local access.
+ */
+ucs_status_t uct_gaudi_copy_import_dmabuf(uct_md_h md, int dmabuf_fd, size_t length,
+                                         uint64_t offset, uint64_t *device_va)
+{
+    uct_gaudi_copy_md_t *gaudi_md = ucs_derived_of(md, uct_gaudi_copy_md_t);
+    union hl_mem_args ioctl_args;
+    int rc;
+    
+    if (dmabuf_fd < 0 || !length || !device_va) {
+        return UCS_ERR_INVALID_PARAM;
+    }
+    
+    *device_va = 0;
+    
+    /* Register DMA-BUF with the device */
+    memset(&ioctl_args, 0, sizeof(ioctl_args));
+    ioctl_args.in.reg_dmabuf_fd.fd = dmabuf_fd;
+    ioctl_args.in.reg_dmabuf_fd.length = length;
+    ioctl_args.in.op = HL_MEM_OP_REG_DMABUF_FD;
+    
+    rc = ioctl(gaudi_md->hlthunk_fd, DRM_IOCTL_HL_MEMORY, &ioctl_args);
+    if (rc) {
+        ucs_error("Failed to register DMA-BUF fd=%d length=%zu: %s", 
+                 dmabuf_fd, length, strerror(errno));
+        UCS_STATS_UPDATE_COUNTER(gaudi_md->stats, UCT_GAUDI_COPY_STAT_DMA_ERRORS, 1);
+        return uct_gaudi_translate_error(rc);
+    }
+    
+    *device_va = ioctl_args.out.device_virt_addr;
+    
+    ucs_debug("Imported DMA-BUF fd=%d length=%zu -> device_va=0x%lx", 
+             dmabuf_fd, length, *device_va);
+    
+    return UCS_OK;
+}
+
+/**
+ * @brief Unmap DMA-BUF device virtual address
+ * 
+ * This function unmaps a previously imported DMA-BUF from the device
+ * virtual address space.
+ */
+ucs_status_t uct_gaudi_copy_unmap_dmabuf(uct_md_h md, uint64_t device_va)
+{
+    uct_gaudi_copy_md_t *gaudi_md = ucs_derived_of(md, uct_gaudi_copy_md_t);
+    union hl_mem_args ioctl_args;
+    int rc;
+    
+    if (!device_va) {
+        return UCS_ERR_INVALID_PARAM;
+    }
+    
+    /* Unmap the device virtual address */
+    memset(&ioctl_args, 0, sizeof(ioctl_args));
+    ioctl_args.in.unmap.device_virt_addr = device_va;
+    ioctl_args.in.op = HL_MEM_OP_UNMAP;
+    
+    rc = ioctl(gaudi_md->hlthunk_fd, DRM_IOCTL_HL_MEMORY, &ioctl_args);
+    if (rc) {
+        ucs_warn("Failed to unmap DMA-BUF device_va=0x%lx: %s", 
+                device_va, strerror(errno));
+        UCS_STATS_UPDATE_COUNTER(gaudi_md->stats, UCT_GAUDI_COPY_STAT_DMA_ERRORS, 1);
+        return uct_gaudi_translate_error(rc);
+    }
+    
+    ucs_debug("Unmapped DMA-BUF device_va=0x%lx", device_va);
     return UCS_OK;
 }
 

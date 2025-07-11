@@ -143,4 +143,13 @@ ucs_status_t uct_gaudi_copy_rcache_mem_reg(uct_md_h md, void *address, size_t le
 ucs_status_t uct_gaudi_copy_rcache_mem_dereg(uct_md_h md, 
                                             const uct_md_mem_dereg_params_t *params);
 
+/* DMA-BUF based device-to-device IPC functions */
+ucs_status_t uct_gaudi_copy_export_dmabuf(uct_md_h md, void *address, size_t length,
+                                         int *dmabuf_fd, uint64_t *dmabuf_offset);
+
+ucs_status_t uct_gaudi_copy_import_dmabuf(uct_md_h md, int dmabuf_fd, size_t length,
+                                         uint64_t offset, uint64_t *device_va);
+
+ucs_status_t uct_gaudi_copy_unmap_dmabuf(uct_md_h md, uint64_t device_va);
+
 #endif
