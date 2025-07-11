@@ -242,6 +242,7 @@ AS_IF([test "x$with_docs_only" = xyes],
      m4_include([config/m4/cuda.m4])
      m4_include([config/m4/rocm.m4])
      m4_include([config/m4/ze.m4])
+     m4_include([config/m4/gaudi.m4])
      m4_include([config/m4/gdrcopy.m4])
      m4_include([config/m4/mad.m4])
      m4_include([config/m4/lcov.m4])
