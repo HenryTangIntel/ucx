@@ -22,6 +22,8 @@ typedef struct uct_gaudi_mem {
     uint64_t handle;    /* Device memory handle */
     uint64_t dev_addr;  /* Device address */
     int dmabuf_fd;      /* DMA-BUF file descriptor */
+    uint64_t dmabuf_offset; /* Offset within DMA-BUF (for mapped memory) */
+    uint8_t is_mapped_memory; /* Whether this is mapped device memory */
     ucs_list_link_t list; /* List linkage for tracking */
 } uct_gaudi_mem_t;
 
@@ -75,9 +77,12 @@ typedef struct uct_gaudi_copy_md {
     
     struct {
         int                      dmabuf_supported; /* Whether DMA-BUF is supported */
+        int                      mapped_dmabuf_supported; /* Enhanced DMA-BUF with offset */
+        int                      nic_ports_available; /* NIC ports for scale-out */
         ucs_ternary_auto_value_t enable_rcache;   /* Enable cache */
         double                   max_reg_ratio;   /* Max registration ratio */
         ucs_on_off_auto_value_t  alloc_whole_reg; /* Register whole allocation */
+        ucs_ternary_auto_value_t enable_hw_block_access; /* Direct hardware access */
     } config;
     
     struct hlthunk_hw_ip_info    hw_info;         /* Hardware information */
@@ -98,6 +103,9 @@ typedef struct uct_gaudi_copy_md_config {
     ucs_ternary_auto_value_t    enable_rcache;   /* Enable registration cache */
     ucs_rcache_config_t         rcache;          /* Registration cache config */
     ucs_time_t                  reg_cost;        /* Registration cost estimation */
+    ucs_ternary_auto_value_t    enable_mapped_dmabuf; /* Enhanced DMA-BUF with offset */
+    ucs_ternary_auto_value_t    enable_hw_block_access; /* Hardware block access */
+    ucs_ternary_auto_value_t    enable_nic_scale_out; /* NIC-based scale-out */
 } uct_gaudi_copy_md_config_t;
 
 ucs_status_t uct_gaudi_copy_md_detect_memory_type(uct_md_h md,

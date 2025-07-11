@@ -72,6 +72,21 @@ static ucs_config_field_t uct_gaudi_copy_md_config_table[] = {
      ucs_offsetof(uct_gaudi_copy_md_config_t, reg_cost),
      UCS_CONFIG_TYPE_TIME},
 
+    {"ENABLE_MAPPED_DMABUF", "try",
+     "Enable enhanced DMA-BUF support with offset capability (Gaudi2+)",
+     ucs_offsetof(uct_gaudi_copy_md_config_t, enable_mapped_dmabuf),
+     UCS_CONFIG_TYPE_TERNARY_AUTO},
+
+    {"ENABLE_HW_BLOCK_ACCESS", "try",
+     "Enable direct hardware block access for advanced features",
+     ucs_offsetof(uct_gaudi_copy_md_config_t, enable_hw_block_access),
+     UCS_CONFIG_TYPE_TERNARY_AUTO},
+
+    {"ENABLE_NIC_SCALE_OUT", "try", 
+     "Enable NIC-based scale-out communication capabilities",
+     ucs_offsetof(uct_gaudi_copy_md_config_t, enable_nic_scale_out),
+     UCS_CONFIG_TYPE_TERNARY_AUTO},
+
     {NULL}
 };
 
@@ -415,6 +430,8 @@ ucs_status_t uct_gaudi_copy_mem_alloc(uct_md_h md, size_t *length_p,
     gaudi_memh->handle = handle;
     gaudi_memh->dev_addr = addr;
     gaudi_memh->dmabuf_fd = -1;
+    gaudi_memh->dmabuf_offset = 0;
+    gaudi_memh->is_mapped_memory = 1;
     
     /* Add to tracking list */
     ucs_recursive_spin_lock(&gaudi_md->memh_lock);
@@ -426,9 +443,24 @@ ucs_status_t uct_gaudi_copy_mem_alloc(uct_md_h md, size_t *length_p,
 
     /* Optionally export as DMA-BUF if flags indicate it */
     if (flags & UCT_MD_MEM_FLAG_FIXED) {
-        /* Export device memory as DMA-BUF for sharing with InfiniBand */
-        int dmabuf_fd = hlthunk_device_memory_export_dmabuf_fd(gaudi_md->hlthunk_fd, 
+        int dmabuf_fd = -1;
+        
+        /* Try enhanced DMA-BUF API first (Gaudi2+) */
+        if (gaudi_md->config.mapped_dmabuf_supported) {
+            dmabuf_fd = hlthunk_device_mapped_memory_export_dmabuf_fd(
+                gaudi_md->hlthunk_fd, (uint64_t)addr, *length_p, 0, 0);
+            if (dmabuf_fd >= 0) {
+                gaudi_memh->dmabuf_offset = 0;
+                ucs_debug("Exported as enhanced DMA-BUF fd %d with offset support", dmabuf_fd);
+            }
+        }
+        
+        /* Fallback to legacy DMA-BUF API */
+        if (dmabuf_fd < 0) {
+            dmabuf_fd = hlthunk_device_memory_export_dmabuf_fd(gaudi_md->hlthunk_fd, 
                                                              (uint64_t)addr, *length_p, 0);
+        }
+        
         if (dmabuf_fd >= 0) {
             gaudi_memh->dmabuf_fd = dmabuf_fd;
             UCS_STATS_UPDATE_COUNTER(gaudi_md->stats, UCT_GAUDI_COPY_STAT_DMABUF_EXPORTS, 1);
@@ -908,6 +940,36 @@ uct_gaudi_copy_md_open(uct_component_t *component, const char *md_name,
     }
     
     md->device_type = "GAUDI";
+    /* Detect advanced capabilities based on device type and driver version */
+    md->config.mapped_dmabuf_supported = 0;
+    md->config.nic_ports_available = 0;
+    
+    /* Check for enhanced DMA-BUF support (Gaudi2+ feature) */
+    if (config->enable_mapped_dmabuf != UCS_NO) {
+        if (md->hw_info.device_id >= HLTHUNK_DEVICE_GAUDI2) {
+            /* Test if enhanced DMA-BUF API is available */
+            int test_fd = hlthunk_device_mapped_memory_export_dmabuf_fd(
+                md->hlthunk_fd, 0, 0, 0, 0);
+            if (test_fd >= 0) {
+                close(test_fd);
+                md->config.mapped_dmabuf_supported = 1;
+                ucs_debug("Enhanced DMA-BUF with offset support detected");
+            } else if (test_fd != -ENOSYS) {
+                md->config.mapped_dmabuf_supported = 1;
+                ucs_debug("Enhanced DMA-BUF API available (test failed as expected)");
+            }
+        }
+    }
+    
+    /* Detect NIC ports for scale-out capabilities */
+    if (config->enable_nic_scale_out != UCS_NO) {
+        if (md->hw_info.nic_ports_mask != 0) {
+            md->config.nic_ports_available = __builtin_popcountll(md->hw_info.nic_ports_mask);
+            ucs_debug("Detected %d NIC ports for scale-out: mask=0x%lx", 
+                     md->config.nic_ports_available, md->hw_info.nic_ports_mask);
+        }
+    }
+
     ucs_debug("Opened Gaudi device fd=%d, DRAM base=0x%lx size=%lu", 
               md->hlthunk_fd, md->hw_info.dram_base_address, md->hw_info.dram_size);
 
