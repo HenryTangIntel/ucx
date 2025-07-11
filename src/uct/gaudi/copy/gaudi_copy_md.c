@@ -58,6 +58,20 @@ static ucs_config_field_t uct_gaudi_copy_md_config_table[] = {
      ucs_offsetof(uct_gaudi_copy_md_config_t, enable_dmabuf),
                   UCS_CONFIG_TYPE_TERNARY},
 
+    {"ENABLE_RCACHE", "try", 
+     "Enable registration cache for improved performance",
+     ucs_offsetof(uct_gaudi_copy_md_config_t, enable_rcache),
+     UCS_CONFIG_TYPE_TERNARY_AUTO},
+
+    {"RCACHE_", "", NULL,
+     ucs_offsetof(uct_gaudi_copy_md_config_t, rcache),
+     UCS_CONFIG_TYPE_TABLE(ucs_rcache_config_table)},
+
+    {"REG_COST", "7000ns",
+     "Memory registration cost estimation",
+     ucs_offsetof(uct_gaudi_copy_md_config_t, reg_cost),
+     UCS_CONFIG_TYPE_TIME},
+
     {NULL}
 };
 
@@ -74,6 +88,81 @@ static int gaudi_lookup_busid_from_env(int device_index, char *bus_id, size_t bu
 
 /* Dummy memh for already registered memory */
 static struct {} uct_gaudi_dummy_memh;
+
+/* Statistics class definition */
+static ucs_stats_class_t uct_gaudi_copy_md_stats_class = {
+    .name           = "gaudi_copy_md",
+    .num_counters   = UCT_GAUDI_COPY_STAT_LAST,
+    .counter_names  = {
+        [UCT_GAUDI_COPY_STAT_REG_CACHE_HITS]    = "reg_cache_hits",
+        [UCT_GAUDI_COPY_STAT_REG_CACHE_MISSES]  = "reg_cache_misses",
+        [UCT_GAUDI_COPY_STAT_DMABUF_EXPORTS]    = "dmabuf_exports",
+        [UCT_GAUDI_COPY_STAT_DMA_ERRORS]        = "dma_errors"
+    }
+};
+
+/**
+ * @brief Enhanced error handling - convert error code to string
+ */
+const char* uct_gaudi_error_string(int error_code)
+{
+    switch (error_code) {
+        case UCT_GAUDI_ERR_DEVICE_NOT_FOUND:    return "Gaudi device not found";
+        case UCT_GAUDI_ERR_OUT_OF_MEMORY:       return "Out of device memory";
+        case UCT_GAUDI_ERR_INVALID_PARAMS:      return "Invalid parameters";
+        case UCT_GAUDI_ERR_DEVICE_BUSY:         return "Device is busy";
+        case UCT_GAUDI_ERR_DMA_FAILED:          return "DMA operation failed";
+        case UCT_GAUDI_ERR_TIMEOUT:             return "Operation timed out";
+        case UCT_GAUDI_ERR_PERMISSION_DENIED:   return "Permission denied";
+        case UCT_GAUDI_ERR_CHANNEL_FAILED:      return "Channel operation failed";
+        default:                                return "Unknown Gaudi error";
+    }
+}
+
+/**
+ * @brief Translate hlthunk error codes to UCX status codes
+ */
+ucs_status_t uct_gaudi_translate_error(int hlthunk_error)
+{
+    if (hlthunk_error == 0) {
+        return UCS_OK;
+    }
+    
+    switch (hlthunk_error) {
+        case -ENODEV:
+        case -ENOENT:
+            return UCS_ERR_NO_DEVICE;
+        case -ENOMEM:
+            return UCS_ERR_NO_MEMORY;
+        case -EINVAL:
+            return UCS_ERR_INVALID_PARAM;
+        case -EBUSY:
+            return UCS_ERR_BUSY;
+        case -ETIMEDOUT:
+            return UCS_ERR_TIMED_OUT;
+        case -EACCES:
+        case -EPERM:
+            return UCS_ERR_NO_PERMISSION;
+        default:
+            return UCS_ERR_IO_ERROR;
+    }
+}
+
+/* Enhanced error logging macro */
+#define UCT_GAUDI_FUNC_LOG(_func, _log_level, _error) \
+    ucs_log((_log_level), "%s(%s:%d) failed: %s (error=%d)", \
+            UCS_PP_MAKE_STRING(_func), ucs_basename(__FILE__), __LINE__, \
+            uct_gaudi_error_string(_error), (_error))
+
+#define UCT_GAUDI_FUNC(_func, _log_level) \
+    ({ \
+        int _error = (_func); \
+        ucs_status_t _status = uct_gaudi_translate_error(_error); \
+        if (ucs_unlikely(_status != UCS_OK)) { \
+            UCT_GAUDI_FUNC_LOG(_func, _log_level, _error); \
+        } \
+        _status; \
+    })
 
 /**
  * @brief Check if a memory handle has DMA-BUF that can be shared with InfiniBand
@@ -297,6 +386,7 @@ ucs_status_t uct_gaudi_copy_mem_alloc(uct_md_h md, size_t *length_p,
                                       0, true, true);
     if (handle == 0) {
         ucs_debug("Failed to allocate device memory size %zu", *length_p);
+        UCS_STATS_UPDATE_COUNTER(gaudi_md->stats, UCT_GAUDI_COPY_STAT_DMA_ERRORS, 1);
         return UCS_ERR_NO_MEMORY;
     }
     
@@ -307,6 +397,7 @@ ucs_status_t uct_gaudi_copy_mem_alloc(uct_md_h md, size_t *length_p,
     if (addr == 0) {
         hlthunk_device_memory_free(gaudi_md->hlthunk_fd, handle);
         ucs_error("Failed to map device memory handle 0x%lx", handle);
+        UCS_STATS_UPDATE_COUNTER(gaudi_md->stats, UCT_GAUDI_COPY_STAT_DMA_ERRORS, 1);
         return UCS_ERR_NO_MEMORY;
     }
     
@@ -340,9 +431,11 @@ ucs_status_t uct_gaudi_copy_mem_alloc(uct_md_h md, size_t *length_p,
                                                              (uint64_t)addr, *length_p, 0);
         if (dmabuf_fd >= 0) {
             gaudi_memh->dmabuf_fd = dmabuf_fd;
+            UCS_STATS_UPDATE_COUNTER(gaudi_md->stats, UCT_GAUDI_COPY_STAT_DMABUF_EXPORTS, 1);
             ucs_debug("Exported allocated memory as DMA-BUF fd %d for IB sharing", dmabuf_fd);
         } else {
             ucs_warn("Failed to export allocated memory as DMA-BUF (fd=%d)", dmabuf_fd);
+            UCS_STATS_UPDATE_COUNTER(gaudi_md->stats, UCT_GAUDI_COPY_STAT_DMA_ERRORS, 1);
         }
     }
 
@@ -491,6 +584,95 @@ UCS_PROFILE_FUNC(ucs_status_t, uct_gaudi_copy_md_detect_memory_type,
     return UCS_OK;
 }
 
+/* Registration cache operations */
+static ucs_status_t uct_gaudi_copy_rcache_mem_reg(void *context, ucs_rcache_t *rcache,
+                                                  void *arg, ucs_rcache_region_t *rregion,
+                                                  uint16_t rcache_mem_reg_flags)
+{
+    uct_gaudi_copy_md_t *md = (uct_gaudi_copy_md_t*)context;
+    uct_gaudi_copy_rcache_region_t *region = ucs_derived_of(rregion, uct_gaudi_copy_rcache_region_t);
+    uct_md_mem_reg_params_t *params = (uct_md_mem_reg_params_t*)arg;
+    ucs_status_t status;
+    
+    status = uct_gaudi_copy_mem_reg(&md->super, (void*)region->super.super.start,
+                                   region->super.super.end - region->super.super.start,
+                                   params, (uct_mem_h*)&region->memh);
+    if (status == UCS_OK) {
+        UCS_STATS_UPDATE_COUNTER(md->stats, UCT_GAUDI_COPY_STAT_REG_CACHE_MISSES, 1);
+    }
+    
+    return status;
+}
+
+static void uct_gaudi_copy_rcache_mem_dereg(void *context, ucs_rcache_t *rcache,
+                                           ucs_rcache_region_t *rregion)
+{
+    uct_gaudi_copy_md_t *md = (uct_gaudi_copy_md_t*)context;
+    uct_gaudi_copy_rcache_region_t *region = ucs_derived_of(rregion, uct_gaudi_copy_rcache_region_t);
+    uct_md_mem_dereg_params_t params = {
+        .field_mask = UCT_MD_MEM_DEREG_FIELD_MEMH,
+        .memh = (uct_mem_h)&region->memh
+    };
+    
+    uct_gaudi_copy_mem_dereg(&md->super, &params);
+}
+
+static void uct_gaudi_copy_rcache_dump_region(void *context, ucs_rcache_t *rcache,
+                                             ucs_rcache_region_t *rregion, char *buf, size_t max)
+{
+    uct_gaudi_copy_rcache_region_t *region = ucs_derived_of(rregion, uct_gaudi_copy_rcache_region_t);
+    snprintf(buf, max, "bar ptr:%p handle:0x%lx", region->memh.vaddr, region->memh.handle);
+}
+
+static ucs_rcache_ops_t uct_gaudi_copy_rcache_ops = {
+    .mem_reg     = uct_gaudi_copy_rcache_mem_reg,
+    .mem_dereg   = uct_gaudi_copy_rcache_mem_dereg,
+    .dump_region = uct_gaudi_copy_rcache_dump_region
+};
+
+/* Enhanced registration functions that use cache when available */
+ucs_status_t uct_gaudi_copy_rcache_mem_reg(uct_md_h md, void *address, size_t length,
+                                          const uct_md_mem_reg_params_t *params, 
+                                          uct_mem_h *memh_p)
+{
+    uct_gaudi_copy_md_t *gaudi_md = ucs_derived_of(md, uct_gaudi_copy_md_t);
+    ucs_rcache_region_t *rregion;
+    ucs_status_t status;
+
+    if (gaudi_md->rcache == NULL) {
+        /* Fallback to direct registration */
+        return uct_gaudi_copy_mem_reg(md, address, length, params, memh_p);
+    }
+
+    status = ucs_rcache_get(gaudi_md->rcache, address, length, PROT_READ | PROT_WRITE,
+                           (void*)params, &rregion);
+    if (status != UCS_OK) {
+        return status;
+    }
+
+    UCS_STATS_UPDATE_COUNTER(gaudi_md->stats, UCT_GAUDI_COPY_STAT_REG_CACHE_HITS, 1);
+    *memh_p = (uct_mem_h)&ucs_derived_of(rregion, uct_gaudi_copy_rcache_region_t)->memh;
+    return UCS_OK;
+}
+
+ucs_status_t uct_gaudi_copy_rcache_mem_dereg(uct_md_h md, 
+                                            const uct_md_mem_dereg_params_t *params)
+{
+    uct_gaudi_copy_md_t *gaudi_md = ucs_derived_of(md, uct_gaudi_copy_md_t);
+
+    if (gaudi_md->rcache == NULL) {
+        /* Fallback to direct deregistration */
+        return uct_gaudi_copy_mem_dereg(md, params);
+    }
+
+    /* For cache-based registration, we just put the region back */
+    uct_gaudi_mem_t *gaudi_memh = (uct_gaudi_mem_t*)params->memh;
+    uct_gaudi_copy_rcache_region_t *region = ucs_container_of(gaudi_memh, 
+                                                             uct_gaudi_copy_rcache_region_t, memh);
+    ucs_rcache_region_put(gaudi_md->rcache, &region->super);
+    return UCS_OK;
+}
+
 static void uct_gaudi_copy_md_close(uct_md_h uct_md) {
     uct_gaudi_copy_md_t *md = ucs_derived_of(uct_md, uct_gaudi_copy_md_t);
     uct_gaudi_mem_t *gaudi_memh, *tmp;
@@ -511,6 +693,16 @@ static void uct_gaudi_copy_md_close(uct_md_h uct_md) {
     ucs_recursive_spin_unlock(&md->memh_lock);
     
     ucs_recursive_spinlock_destroy(&md->memh_lock);
+
+    /* Cleanup registration cache */
+    if (md->rcache != NULL) {
+        ucs_rcache_destroy(md->rcache);
+    }
+
+    /* Cleanup statistics */
+    if (md->stats != NULL) {
+        UCS_STATS_NODE_FREE(md->stats);
+    }
 
     if (md->hlthunk_fd >= 0) {
         hlthunk_close(md->hlthunk_fd);
@@ -689,6 +881,12 @@ uct_gaudi_copy_md_open(uct_component_t *component, const char *md_name,
     
     /* Initialize configuration */
     md->config.dmabuf_supported = (config->enable_dmabuf != UCS_NO);
+    md->config.enable_rcache = config->enable_rcache;
+    md->config.max_reg_ratio = config->max_reg_ratio;
+    md->config.alloc_whole_reg = config->alloc_whole_reg;
+    
+    /* Initialize registration cost estimation */
+    md->reg_cost = ucs_linear_func_make(config->reg_cost, 0);
     
     /* Open hlthunk device */
     md->hlthunk_fd = open_gaudi_device_by_index(md->device_index);
@@ -712,6 +910,40 @@ uct_gaudi_copy_md_open(uct_component_t *component, const char *md_name,
     md->device_type = "GAUDI";
     ucs_debug("Opened Gaudi device fd=%d, DRAM base=0x%lx size=%lu", 
               md->hlthunk_fd, md->hw_info.dram_base_address, md->hw_info.dram_size);
+
+    /* Initialize statistics */
+    ucs_status_t status = UCS_STATS_NODE_ALLOC(&md->stats, &uct_gaudi_copy_md_stats_class, 
+                                               ucs_stats_get_root(), "-%p", md);
+    if (status != UCS_OK) {
+        ucs_warn("Failed to initialize statistics");
+        md->stats = NULL;
+    }
+
+    /* Initialize registration cache if enabled */
+    md->rcache = NULL;
+    if (md->config.enable_rcache != UCS_NO) {
+        ucs_rcache_params_t rcache_params = {
+            .region_struct_size = sizeof(uct_gaudi_copy_rcache_region_t),
+            .max_alignment      = ucs_get_page_size(),
+            .max_unreleased     = SIZE_MAX,
+            .max_regions        = UINT_MAX,
+            .max_size           = SIZE_MAX,
+            .alignment          = ucs_get_page_size(),
+            .ucm_events         = UCM_EVENT_VM_UNMAPPED | UCM_EVENT_MEM_TYPE_FREE,
+            .ucm_event_priority = 1000,
+            .context            = md,
+            .ops                = &uct_gaudi_copy_rcache_ops
+        };
+        
+        status = ucs_rcache_create(&rcache_params, "gaudi_copy", 
+                                   ucs_stats_get_root(), &md->rcache);
+        if (status != UCS_OK) {
+            ucs_warn("Failed to create registration cache: %s", ucs_status_string(status));
+            md->rcache = NULL;
+        } else {
+            ucs_debug("Created Gaudi registration cache");
+        }
+    }
 
     *md_p = (uct_md_h)md;
 

@@ -23,6 +23,10 @@ typedef struct uct_gaudi_copy_iface {
     /* config parameters to control gaudi copy transport */
     struct {
         double                  bandwidth;
+        size_t                  async_max_inflight;
+        double                  latency_overhead;
+        size_t                  bcopy_thresh;
+        ucs_config_bw_spec_t    bandwidth_spec[UCS_MEMORY_TYPE_LAST][UCS_MEMORY_TYPE_LAST];
     } config;
     /* handler to support arm/wakeup feature */
     struct {
@@ -37,6 +41,12 @@ typedef struct uct_gaudi_copy_iface_config {
     unsigned                max_poll;
     unsigned                max_gaudi_events;
     double                  bandwidth;
+    size_t                  async_max_inflight;
+    double                  latency_overhead;
+    size_t                  bcopy_thresh;
+    ucs_config_bw_spec_t    bandwidth_h2d;
+    ucs_config_bw_spec_t    bandwidth_d2h;
+    ucs_config_bw_spec_t    bandwidth_d2d;
 } uct_gaudi_copy_iface_config_t;
 
 #endif

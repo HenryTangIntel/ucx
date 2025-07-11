@@ -9,8 +9,10 @@
 #include <uct/base/uct_md.h>
 #include <uct/gaudi/base/gaudi_md.h>
 #include <ucs/memory/memory_type.h>
+#include <ucs/memory/rcache.h>
 #include <ucs/datastruct/list.h>
 #include <ucs/type/spinlock.h>
+#include <ucs/stats/stats.h>
 #include <hlthunk.h>
 
 /* Gaudi memory handle structure */
@@ -30,6 +32,32 @@ typedef struct uct_gaudi_key {
     int dmabuf_fd;      /* DMA-BUF file descriptor */
 } uct_gaudi_key_t;
 
+/* Registration cache region structure */
+typedef struct uct_gaudi_copy_rcache_region {
+    ucs_rcache_region_t  super;
+    uct_gaudi_mem_t      memh;      /* Memory handle */
+} uct_gaudi_copy_rcache_region_t;
+
+/* Error codes for enhanced error handling */
+typedef enum {
+    UCT_GAUDI_ERR_DEVICE_NOT_FOUND    = -1,
+    UCT_GAUDI_ERR_OUT_OF_MEMORY       = -2,
+    UCT_GAUDI_ERR_INVALID_PARAMS      = -3,
+    UCT_GAUDI_ERR_DEVICE_BUSY         = -4,
+    UCT_GAUDI_ERR_DMA_FAILED          = -5,
+    UCT_GAUDI_ERR_TIMEOUT             = -6,
+    UCT_GAUDI_ERR_PERMISSION_DENIED   = -7,
+    UCT_GAUDI_ERR_CHANNEL_FAILED      = -8
+} uct_gaudi_error_t;
+
+/* Statistics definitions */
+enum {
+    UCT_GAUDI_COPY_STAT_REG_CACHE_HITS,
+    UCT_GAUDI_COPY_STAT_REG_CACHE_MISSES,
+    UCT_GAUDI_COPY_STAT_DMABUF_EXPORTS,
+    UCT_GAUDI_COPY_STAT_DMA_ERRORS,
+    UCT_GAUDI_COPY_STAT_LAST
+};
 
 extern uct_component_t uct_gaudi_copy_component;
 
@@ -40,13 +68,23 @@ typedef struct uct_gaudi_copy_md {
     struct uct_md                super;           /* Domain info */
     int                          hlthunk_fd;      /* Habana Labs device file descriptor */
     int                          device_index;    /* Device index */
+    
+    /* Registration cache components */
+    ucs_rcache_t                *rcache;          /* Registration cache */
+    ucs_linear_func_t           reg_cost;         /* Cost estimation */
+    
     struct {
         int                      dmabuf_supported; /* Whether DMA-BUF is supported */
+        ucs_ternary_auto_value_t enable_rcache;   /* Enable cache */
+        double                   max_reg_ratio;   /* Max registration ratio */
+        ucs_on_off_auto_value_t  alloc_whole_reg; /* Register whole allocation */
     } config;
+    
     struct hlthunk_hw_ip_info    hw_info;         /* Hardware information */
     char                        *device_type;     /* Device type string */
     ucs_list_link_t              memh_list;       /* List of allocated memory handles */
     ucs_recursive_spinlock_t     memh_lock;       /* Lock for memory handle list */
+    ucs_stats_node_t             stats;           /* Statistics */
 } uct_gaudi_copy_md_t;
 
 /**
@@ -57,6 +95,9 @@ typedef struct uct_gaudi_copy_md_config {
     ucs_ternary_auto_value_t    enable_dmabuf;   /* Enable DMA-BUF support */
     ucs_on_off_auto_value_t     alloc_whole_reg; /* Register whole allocation */
     double                      max_reg_ratio;   /* Max registration ratio */
+    ucs_ternary_auto_value_t    enable_rcache;   /* Enable registration cache */
+    ucs_rcache_config_t         rcache;          /* Registration cache config */
+    ucs_time_t                  reg_cost;        /* Registration cost estimation */
 } uct_gaudi_copy_md_config_t;
 
 ucs_status_t uct_gaudi_copy_md_detect_memory_type(uct_md_h md,
@@ -81,5 +122,17 @@ ucs_status_t uct_gaudi_copy_mem_free(uct_md_h md, uct_mem_h memh);
 ucs_status_t uct_gaudi_copy_mkey_pack(uct_md_h md, uct_mem_h memh, void *address,
                                      size_t length, const uct_md_mkey_pack_params_t *params,
                                      void *mkey_buffer);
+
+/* Enhanced error handling functions */
+const char* uct_gaudi_error_string(int error_code);
+ucs_status_t uct_gaudi_translate_error(int hlthunk_error);
+
+/* Registration cache functions */
+ucs_status_t uct_gaudi_copy_rcache_mem_reg(uct_md_h md, void *address, size_t length,
+                                          const uct_md_mem_reg_params_t *params, 
+                                          uct_mem_h *memh_p);
+
+ucs_status_t uct_gaudi_copy_rcache_mem_dereg(uct_md_h md, 
+                                            const uct_md_mem_dereg_params_t *params);
 
 #endif
