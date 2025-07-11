@@ -41,10 +41,13 @@
 
 
 typedef struct uct_gaudi_ipc_md_handle {
-    uint64_t handle;
+    uint64_t handle;            /* Legacy handle for compatibility */
     uint32_t channel_id;        /* Custom channel ID for node-local communication */
     uint32_t src_device_id;     /* Source Gaudi device ID */
     uint32_t dst_device_id;     /* Destination Gaudi device ID */
+    int dmabuf_fd;              /* DMA-BUF file descriptor for real IPC */
+    uint64_t dmabuf_size;       /* Size of DMA-BUF region */
+    uint64_t dmabuf_offset;     /* Offset within DMA-BUF (Gaudi2+) */
 } uct_gaudi_ipc_md_handle_t;
 
 /**
@@ -56,6 +59,8 @@ typedef struct uct_gaudi_ipc_md {
     int                     *device_fds;        /* File descriptors for each device */
     uint64_t                *channel_map;       /* Channel mapping between devices */
     pthread_mutex_t          channel_lock;      /* Lock for channel operations */
+    int                      enhanced_dmabuf;   /* Enhanced DMA-BUF support (Gaudi2+) */
+    int                      primary_device_fd; /* Primary device for this MD */
 } uct_gaudi_ipc_md_t;
 
 
@@ -112,6 +117,8 @@ typedef struct {
     uint32_t                  src_device_id;   /* Source device in custom channel */
     uint32_t                  dst_device_id;   /* Destination device in custom channel */
     uint32_t                  channel_id;      /* Custom channel identifier */
+    int                       dmabuf_fd;       /* DMA-BUF file descriptor */
+    uint64_t                  imported_va;     /* Device VA from DMA-BUF import */
 } uct_gaudi_ipc_rkey_t;
 
 
