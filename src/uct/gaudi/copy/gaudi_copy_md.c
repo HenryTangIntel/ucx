@@ -100,11 +100,76 @@ static ucs_status_t uct_gaudi_copy_md_mem_query(uct_md_h uct_md, const void *add
                                                size_t length,
                                                uct_md_mem_attr_t *mem_attr_p);
 
+/* Check if Gaudi device is available for operations */
+
+/* Forward declaration */
+static int uct_gaudi_open_hlthunk_device(int device_index, ucs_sys_bus_id_t bus_id);
+
+/* Ensure device is opened lazily when first needed */
+static int uct_gaudi_copy_md_ensure_device_open(uct_gaudi_copy_md_t *md)
+{
+    ucs_sys_bus_id_t bus_id;
+    char bus_id_str[64];
+    
+    if (md->hlthunk_fd >= 0) {
+        return 1;  /* Already opened */
+    }
+    
+    /* First time access - try to open device */
+    bus_id = uct_gaudi_get_busid_from_env(md->device_index, bus_id_str);
+    md->hlthunk_fd = uct_gaudi_open_hlthunk_device(md->device_index, bus_id);
+    
+    if (md->hlthunk_fd < 0) {
+        ucs_debug("Gaudi device %d unavailable (hlthunk_open failed)", md->device_index);
+        return 0;  /* Device unavailable */
+    }
+    
+    /* Get hardware information now that device is open */
+    if (hlthunk_get_hw_ip_info(md->hlthunk_fd, &md->hw_info) != 0) {
+        ucs_warn("Failed to get hardware info from hlthunk for device %d", md->device_index);
+        memset(&md->hw_info, 0, sizeof(md->hw_info));
+    }
+    
+    /* Update capabilities based on successful device opening */
+    md->config.mapped_dmabuf_supported = 0;
+    md->config.nic_ports_available = 0;
+    
+    /* Detect enhanced DMA-BUF support (Gaudi2+ feature) */
+    if (md->hw_info.device_id >= HLTHUNK_DEVICE_GAUDI2) {
+        /* Test if enhanced DMA-BUF API is available */
+        int test_fd = hlthunk_device_mapped_memory_export_dmabuf_fd(
+            md->hlthunk_fd, 0, 0, 0, 0);
+        if (test_fd >= 0) {
+            close(test_fd);
+            md->config.mapped_dmabuf_supported = 1;
+            ucs_debug("Enhanced DMA-BUF with offset support detected on device %d", md->device_index);
+        } else if (test_fd != -ENOSYS) {
+            md->config.mapped_dmabuf_supported = 1;
+            ucs_debug("Enhanced DMA-BUF API available on device %d (test failed as expected)", md->device_index);
+        }
+    }
+    
+    /* Detect NIC ports for scale-out capabilities */
+    if (md->hw_info.nic_ports_mask != 0) {
+        md->config.nic_ports_available = __builtin_popcountll(md->hw_info.nic_ports_mask);
+        ucs_debug("Detected %d NIC ports for scale-out: mask=0x%lx on device %d", 
+                 md->config.nic_ports_available, md->hw_info.nic_ports_mask, md->device_index);
+    }
+    
+    ucs_debug("Successfully opened Gaudi device %d on first access", md->device_index);
+    return 1;  /* Device now available */
+}
+
+static inline int uct_gaudi_copy_md_is_device_active(uct_gaudi_copy_md_t *md)
+{
+    return uct_gaudi_copy_md_ensure_device_open(md);
+}
+
 static uct_gaudi_mem_t* 
 uct_gaudi_copy_find_memh_by_address(uct_gaudi_copy_md_t *md, 
                                    const void *address, size_t length);
 
-/* Dummy memh for already registered memory */
+/* Dummy memh for already registered memory or unavailable device */
 static struct {} uct_gaudi_dummy_memh;
 
 #ifdef ENABLE_STATS
@@ -313,6 +378,12 @@ ucs_status_t uct_gaudi_copy_mem_alloc(uct_md_h md, size_t *length_p,
         return UCS_ERR_UNSUPPORTED;
     }
     
+    /* Check if Gaudi device is available */
+    if (!uct_gaudi_copy_md_is_device_active(gaudi_md)) {
+        ucs_debug("Gaudi device unavailable for memory allocation");
+        return UCS_ERR_NO_DEVICE;
+    }
+    
     ucs_debug("uct_gaudi_copy_mem_alloc called: length=%zu, mem_type=%d, flags=0x%x", 
               *length_p, mem_type, flags);
     
@@ -401,6 +472,12 @@ ucs_status_t uct_gaudi_copy_mem_free(uct_md_h md, uct_mem_h memh)
 {
     uct_gaudi_mem_t *gaudi_memh = memh;
     uct_gaudi_copy_md_t *gaudi_md = ucs_derived_of(md, uct_gaudi_copy_md_t);
+    
+    /* Handle dummy memory handle for unavailable devices */
+    if (memh == &uct_gaudi_dummy_memh) {
+        ucs_debug("Freeing dummy memory handle for unavailable device");
+        return UCS_OK;
+    }
     
     /* Remove from tracking list */
     ucs_recursive_spin_lock(&gaudi_md->memh_lock);
@@ -785,9 +862,15 @@ UCS_PROFILE_FUNC(ucs_status_t, uct_gaudi_copy_mem_reg,
     uint64_t flags = UCT_MD_MEM_REG_FIELD_VALUE(params, flags, FIELD_FLAGS, 0);
     uct_gaudi_mem_t *gaudi_memh;
     
+    /* Check if Gaudi device is available */
+    if (!uct_gaudi_copy_md_is_device_active(gaudi_md)) {
+        ucs_debug("Gaudi device unavailable for memory registration, returning dummy handle");
+        *memh_p = &uct_gaudi_dummy_memh;
+        return UCS_OK;
+    }
+    
     /* Check if this is already Gaudi device memory */
-    if (gaudi_md->hlthunk_fd >= 0 &&
-        (uintptr_t)address >= gaudi_md->hw_info.dram_base_address &&
+    if ((uintptr_t)address >= gaudi_md->hw_info.dram_base_address &&
         (uintptr_t)address < (gaudi_md->hw_info.dram_base_address + gaudi_md->hw_info.dram_size)) {
         /* Already device memory, just create a dummy handle */
         *memh_p = &uct_gaudi_dummy_memh;
@@ -937,9 +1020,10 @@ uct_gaudi_copy_md_open(uct_component_t *component, const char *md_name,
 {
     uct_gaudi_copy_md_t *md;
     uct_gaudi_copy_md_config_t *config;
-    ucs_sys_bus_id_t bus_id;
-    char bus_id_str[64];
     int device_index = 0; /* Default to first device */
+#ifdef ENABLE_STATS
+    ucs_status_t status;
+#endif
     
     config = ucs_derived_of(md_config, uct_gaudi_copy_md_config_t);
     
@@ -977,58 +1061,20 @@ uct_gaudi_copy_md_open(uct_component_t *component, const char *md_name,
     /* Initialize registration cost estimation */
     md->reg_cost = ucs_linear_func_make(config->reg_cost, 0);
     
-    /* Get bus ID from environment */
-    bus_id = uct_gaudi_get_busid_from_env(device_index, bus_id_str);
+    /* Device will be opened lazily on first access - no device opening during MD init */
+    ucs_debug("Gaudi MD initialized for device %d - device will be opened on first access", md->device_index);
     
-    md->hlthunk_fd = uct_gaudi_open_hlthunk_device(md->device_index, bus_id);
-    if (md->hlthunk_fd < 0) {
-        ucs_recursive_spinlock_destroy(&md->memh_lock);
-        ucs_free(md);
-        return UCS_ERR_NO_DEVICE;
-    }
+    /* Initialize hardware info as empty - will be populated on first device access */
+    memset(&md->hw_info, 0, sizeof(md->hw_info));
     
-    /* Use default device index for now */
-    ucs_debug("Using default Gaudi device index: %d", md->device_index);
-    
-    /* Get hardware information */
-    if (hlthunk_get_hw_ip_info(md->hlthunk_fd, &md->hw_info) != 0) {
-        ucs_warn("Failed to get hardware info from hlthunk");
-        memset(&md->hw_info, 0, sizeof(md->hw_info));
-    }
-    
-    md->device_type = "GAUDI";
-    /* Detect advanced capabilities based on device type and driver version */
+    /* Initialize advanced capabilities - will be detected on first device access */
     md->config.mapped_dmabuf_supported = 0;
     md->config.nic_ports_available = 0;
     
-    /* Check for enhanced DMA-BUF support (Gaudi2+ feature) */
-    if (config->enable_mapped_dmabuf != UCS_NO) {
-        if (md->hw_info.device_id >= HLTHUNK_DEVICE_GAUDI2) {
-            /* Test if enhanced DMA-BUF API is available */
-            int test_fd = hlthunk_device_mapped_memory_export_dmabuf_fd(
-                md->hlthunk_fd, 0, 0, 0, 0);
-            if (test_fd >= 0) {
-                close(test_fd);
-                md->config.mapped_dmabuf_supported = 1;
-                ucs_debug("Enhanced DMA-BUF with offset support detected");
-            } else if (test_fd != -ENOSYS) {
-                md->config.mapped_dmabuf_supported = 1;
-                ucs_debug("Enhanced DMA-BUF API available (test failed as expected)");
-            }
-        }
-    }
+    /* Enhanced DMA-BUF and NIC detection will happen on first device access */
+    ucs_debug("Enhanced DMA-BUF and NIC capabilities will be detected on first device access");
     
-    /* Detect NIC ports for scale-out capabilities */
-    if (config->enable_nic_scale_out != UCS_NO) {
-        if (md->hw_info.nic_ports_mask != 0) {
-            md->config.nic_ports_available = __builtin_popcountll(md->hw_info.nic_ports_mask);
-            ucs_debug("Detected %d NIC ports for scale-out: mask=0x%lx", 
-                     md->config.nic_ports_available, md->hw_info.nic_ports_mask);
-        }
-    }
-
-    ucs_debug("Opened Gaudi device fd=%d, DRAM base=0x%lx size=%lu", 
-              md->hlthunk_fd, md->hw_info.dram_base_address, md->hw_info.dram_size);
+    md->device_type = "GAUDI";
 
     /* Initialize statistics */
 #ifdef ENABLE_STATS
