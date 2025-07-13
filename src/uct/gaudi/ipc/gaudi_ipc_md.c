@@ -300,14 +300,14 @@ UCS_PROFILE_FUNC(ucs_status_t, uct_gaudi_ipc_rkey_unpack,
 
     /* Import DMA-BUF on the destination device if available */
     if (packed->dmabuf_fd >= 0) {
-        /* Get the MD instance to access device file descriptors */
-        gaudi_md = &uct_gaudi_ipc_component.super; /* This needs proper MD retrieval */
+        /* TODO: Proper MD retrieval from context */
+        (void)gaudi_md; /* Suppress unused variable warning */
+        gaudi_md = NULL; /* Disable for now - needs proper component to MD mapping */
         
-        /* Import the DMA-BUF to get local device virtual address */
-        rc = uct_gaudi_ipc_dmabuf_import(gaudi_md->primary_device_fd,
-                                        packed->dmabuf_fd, 
-                                        packed->b_len,
-                                        &unpacked->super.imported_va);
+        /* Stub - IPC functions not available in current HL-thunk */
+        rc = -ENOSYS; /* uct_gaudi_ipc_dmabuf_import(gaudi_md->primary_device_fd,
+                         packed->dmabuf_fd, packed->b_len,
+                         &unpacked->super.imported_va); */
         if (rc != 0) {
             ucs_warn("Failed to import DMA-BUF fd=%d for IPC: %s",
                      packed->dmabuf_fd, strerror(-rc));
@@ -331,15 +331,19 @@ static ucs_status_t uct_gaudi_ipc_rkey_release(uct_component_t *component,
 {
     uct_gaudi_ipc_unpacked_rkey_t *unpacked = (uct_gaudi_ipc_unpacked_rkey_t *)rkey;
     uct_gaudi_ipc_md_t *gaudi_md;
+    int rc = 0;
     
     ucs_assert(NULL == handle);
 
     /* Clean up imported DMA-BUF if it was imported */
     if (unpacked->super.imported_va != 0) {
-        gaudi_md = &uct_gaudi_ipc_component.super; /* This needs proper MD retrieval */
+        /* TODO: Proper MD retrieval from context */
+        (void)gaudi_md; /* Suppress unused variable warning */
+        gaudi_md = NULL; /* Disable for now - needs proper component to MD mapping */
         
-        int rc = uct_gaudi_ipc_dmabuf_unmap(gaudi_md->primary_device_fd,
-                                           unpacked->super.imported_va);
+        /* Stub - IPC functions not available in current HL-thunk */
+        rc = 0; /* uct_gaudi_ipc_dmabuf_unmap(gaudi_md->primary_device_fd,
+                   unpacked->super.imported_va); */
         if (rc != 0) {
             ucs_warn("Failed to unmap imported DMA-BUF device_va=0x%lx: %s",
                      unpacked->super.imported_va, strerror(-rc));
@@ -391,7 +395,8 @@ uct_gaudi_ipc_mem_dereg(uct_md_h md, const uct_md_mem_dereg_params_t *params)
         
         /* Clean up legacy handle if needed */
         if (key->ph.handle != 0) {
-            hlthunk_ipc_handle_close(key->ph.handle);
+            /* Stub - IPC functions not available in current HL-thunk */
+            /* hlthunk_ipc_handle_close(key->ph.handle); */
         }
         
         ucs_free(key);
@@ -492,10 +497,9 @@ ucs_status_t uct_gaudi_ipc_channel_create(uct_gaudi_ipc_md_t *md,
         return UCS_OK;
     }
     
-    /* Create new custom channel between devices */
-    rc = hlthunk_ipc_channel_create(md->device_fds[src_device], 
-                                   md->device_fds[dst_device], 
-                                   channel_id);
+    /* Stub - IPC functions not available in current HL-thunk */
+    rc = -ENOSYS; /* hlthunk_ipc_channel_create(md->device_fds[src_device], 
+                     md->device_fds[dst_device], channel_id); */
     if (rc == 0) {
         md->channel_map[src_device * md->device_count + dst_device] = *channel_id;
         ucs_debug("Created IPC channel %u between Gaudi devices %u -> %u", 
@@ -514,7 +518,8 @@ ucs_status_t uct_gaudi_ipc_channel_destroy(uct_gaudi_ipc_md_t *md,
     
     pthread_mutex_lock(&md->channel_lock);
     
-    rc = hlthunk_ipc_channel_destroy(channel_id);
+    /* Stub - IPC functions not available in current HL-thunk */
+    rc = 0; /* hlthunk_ipc_channel_destroy(channel_id); */
     if (rc == 0) {
         /* Clear channel from map */
         int i, j;
@@ -539,9 +544,76 @@ ucs_status_t uct_gaudi_ipc_channel_copy(uct_gaudi_ipc_md_t *md,
     int rc;
     
     /* Use custom channel for high-performance node-local copy */
-    rc = hlthunk_ipc_channel_copy(channel_id, -1, -1, dst, src, length);
+    /* Stub - IPC functions not available in current HL-thunk */
+    rc = -ENOSYS; /* hlthunk_ipc_channel_copy(channel_id, -1, -1, dst, src, length); */
     
     return (rc == 0) ? UCS_OK : UCS_ERR_IO_ERROR;
+}
+
+/* Stub functions for direct Gaudi-to-Gaudi communication */
+
+/**
+ * @brief Enable direct scale-out communication between Gaudi devices
+ * Stub - requires future hlthunk API for direct device communication
+ */
+ucs_status_t uct_gaudi_ipc_enable_scale_out(uct_gaudi_ipc_md_t *md,
+                                           uint32_t local_device_id,
+                                           uint32_t remote_device_id)
+{
+    ucs_debug("Gaudi scale-out communication not yet implemented (stub)");
+    return UCS_ERR_UNSUPPORTED;
+}
+
+/**
+ * @brief Setup direct HLS (Habana Link Scale-out) connection
+ * Stub - requires hlthunk_create_hls_connection API
+ */
+ucs_status_t uct_gaudi_ipc_setup_hls_connection(uct_gaudi_ipc_md_t *md,
+                                               uint32_t peer_device_id,
+                                               uint32_t *connection_id)
+{
+    ucs_debug("HLS connection setup not yet implemented (stub)");
+    return UCS_ERR_UNSUPPORTED;
+}
+
+/**
+ * @brief Direct Gaudi-to-Gaudi memory transfer bypassing PCIe
+ * Stub - requires hlthunk_direct_device_transfer API
+ */
+ucs_status_t uct_gaudi_ipc_direct_transfer(uct_gaudi_ipc_md_t *md,
+                                          uint32_t connection_id,
+                                          uint64_t src_device_addr,
+                                          uint64_t dst_device_addr,
+                                          size_t length)
+{
+    ucs_debug("Direct device transfer not yet implemented (stub)");
+    return UCS_ERR_UNSUPPORTED;
+}
+
+/**
+ * @brief Query available direct communication paths between devices
+ * Stub - requires hlthunk_query_device_topology API
+ */
+ucs_status_t uct_gaudi_ipc_query_topology(uct_gaudi_ipc_md_t *md,
+                                         uint32_t device_count,
+                                         uint32_t *device_ids,
+                                         uint32_t *topology_map)
+{
+    ucs_debug("Device topology query not yet implemented (stub)");
+    return UCS_ERR_UNSUPPORTED;
+}
+
+/**
+ * @brief Setup collective communication ring for multi-device operations
+ * Stub - requires hlthunk_create_collective_ring API
+ */
+ucs_status_t uct_gaudi_ipc_setup_collective_ring(uct_gaudi_ipc_md_t *md,
+                                                uint32_t device_count,
+                                                uint32_t *device_ids,
+                                                uint32_t *ring_id)
+{
+    ucs_debug("Collective communication ring not yet implemented (stub)");
+    return UCS_ERR_UNSUPPORTED;
 }
 
 static ucs_status_t

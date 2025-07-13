@@ -89,7 +89,9 @@ typedef struct uct_gaudi_copy_md {
     char                        *device_type;     /* Device type string */
     ucs_list_link_t              memh_list;       /* List of allocated memory handles */
     ucs_recursive_spinlock_t     memh_lock;       /* Lock for memory handle list */
+#ifdef ENABLE_STATS
     ucs_stats_node_t             stats;           /* Statistics */
+#endif
 } uct_gaudi_copy_md_t;
 
 /**

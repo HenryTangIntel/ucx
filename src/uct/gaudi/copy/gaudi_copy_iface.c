@@ -54,15 +54,15 @@ static ucs_config_field_t uct_gaudi_copy_iface_config_table[] = {
      "Threshold for buffered copy operations",
      ucs_offsetof(uct_gaudi_copy_iface_config_t, bcopy_thresh), UCS_CONFIG_TYPE_MEMUNITS},
 
-    {"BW_H2D", "12GBs",
+    {"BW_H2D", "gaudi:12GBps",
      "Host to Device bandwidth for performance modeling",
      ucs_offsetof(uct_gaudi_copy_iface_config_t, bandwidth_h2d), UCS_CONFIG_TYPE_BW_SPEC},
 
-    {"BW_D2H", "12GBs",
+    {"BW_D2H", "gaudi:12GBps",
      "Device to Host bandwidth for performance modeling",
      ucs_offsetof(uct_gaudi_copy_iface_config_t, bandwidth_d2h), UCS_CONFIG_TYPE_BW_SPEC},
 
-    {"BW_D2D", "25GBs",
+    {"BW_D2D", "gaudi:25GBps",
      "Device to Device bandwidth for performance modeling",
      ucs_offsetof(uct_gaudi_copy_iface_config_t, bandwidth_d2d), UCS_CONFIG_TYPE_BW_SPEC},
 

@@ -140,4 +140,29 @@ ucs_status_t uct_gaudi_ipc_channel_copy(uct_gaudi_ipc_md_t *md,
 
 ucs_status_t uct_gaudi_ipc_detect_node_devices(uct_gaudi_ipc_md_t *md);
 
+/* Direct Gaudi-to-Gaudi communication stub functions */
+ucs_status_t uct_gaudi_ipc_enable_scale_out(uct_gaudi_ipc_md_t *md,
+                                           uint32_t local_device_id,
+                                           uint32_t remote_device_id);
+
+ucs_status_t uct_gaudi_ipc_setup_hls_connection(uct_gaudi_ipc_md_t *md,
+                                               uint32_t peer_device_id,
+                                               uint32_t *connection_id);
+
+ucs_status_t uct_gaudi_ipc_direct_transfer(uct_gaudi_ipc_md_t *md,
+                                          uint32_t connection_id,
+                                          uint64_t src_device_addr,
+                                          uint64_t dst_device_addr,
+                                          size_t length);
+
+ucs_status_t uct_gaudi_ipc_query_topology(uct_gaudi_ipc_md_t *md,
+                                         uint32_t device_count,
+                                         uint32_t *device_ids,
+                                         uint32_t *topology_map);
+
+ucs_status_t uct_gaudi_ipc_setup_collective_ring(uct_gaudi_ipc_md_t *md,
+                                                uint32_t device_count,
+                                                uint32_t *device_ids,
+                                                uint32_t *ring_id);
+
 #endif
