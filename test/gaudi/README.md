@@ -56,6 +56,13 @@ The Gaudi-InfiniBand integration enables:
 - `gaudi_memory_type_test.c` - UCS memory type support for Gaudi
 - `gaudi_ucm_test.c` - UCM memory hooks for Gaudi device memory
 
+### Feature-Specific Tests
+- `test_gaudi_rcache.c` - Registration cache functionality testing
+- `test_gaudi_memtype.c` - Memory type detection and handling
+- `test_gaudi_dmabuf.c` - DMA-BUF export/import operations
+- `test_gaudi_stats.c` - Statistics collection and performance monitoring
+- `test_gaudi_ipc.c` - Inter-process communication functionality
+
 ### Test Automation Scripts
 - `run_all_gaudi_tests.sh` - **Comprehensive test suite** - Runs all Gaudi tests systematically with detailed logging
 - `gaudi_stress_tests.sh` - **Stress testing** - Memory allocation, DMA-BUF, and UCX integration stress tests
@@ -82,6 +89,19 @@ The Gaudi-InfiniBand integration enables:
 #### Interactive Demo
 ```bash
 ./demo.sh
+```
+
+#### Feature-Specific Tests
+```bash
+# Run all feature tests
+make test-features
+
+# Individual feature tests
+./test_gaudi_rcache -v      # Registration cache testing
+./test_gaudi_memtype -v     # Memory type detection
+./test_gaudi_dmabuf -v      # DMA-BUF operations
+./test_gaudi_stats -v       # Statistics collection
+./test_gaudi_ipc -v         # IPC functionality
 ```
 
 ### Individual Test Programs

@@ -42,6 +42,30 @@ static ucs_config_field_t uct_gaudi_copy_iface_config_table[] = {
      "Effective memory bandwidth",
      ucs_offsetof(uct_gaudi_copy_iface_config_t, bandwidth), UCS_CONFIG_TYPE_BW},
 
+    {"ASYNC_MAX_INFLIGHT", "64",
+     "Maximum inflight asynchronous operations",
+     ucs_offsetof(uct_gaudi_copy_iface_config_t, async_max_inflight), UCS_CONFIG_TYPE_MEMUNITS},
+
+    {"LATENCY_OVERHEAD", "1.0us",
+     "Additional latency overhead for performance modeling",
+     ucs_offsetof(uct_gaudi_copy_iface_config_t, latency_overhead), UCS_CONFIG_TYPE_TIME},
+
+    {"BCOPY_THRESH", "8192",
+     "Threshold for buffered copy operations",
+     ucs_offsetof(uct_gaudi_copy_iface_config_t, bcopy_thresh), UCS_CONFIG_TYPE_MEMUNITS},
+
+    {"BW_H2D", "gaudi:12GBps",
+     "Host to Device bandwidth for performance modeling",
+     ucs_offsetof(uct_gaudi_copy_iface_config_t, bandwidth_h2d), UCS_CONFIG_TYPE_BW_SPEC},
+
+    {"BW_D2H", "gaudi:12GBps",
+     "Device to Host bandwidth for performance modeling",
+     ucs_offsetof(uct_gaudi_copy_iface_config_t, bandwidth_d2h), UCS_CONFIG_TYPE_BW_SPEC},
+
+    {"BW_D2D", "gaudi:25GBps",
+     "Device to Device bandwidth for performance modeling",
+     ucs_offsetof(uct_gaudi_copy_iface_config_t, bandwidth_d2d), UCS_CONFIG_TYPE_BW_SPEC},
+
     {NULL}
 };
 

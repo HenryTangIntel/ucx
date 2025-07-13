@@ -41,10 +41,13 @@
 
 
 typedef struct uct_gaudi_ipc_md_handle {
-    uint64_t handle;
+    uint64_t handle;            /* Legacy handle for compatibility */
     uint32_t channel_id;        /* Custom channel ID for node-local communication */
     uint32_t src_device_id;     /* Source Gaudi device ID */
     uint32_t dst_device_id;     /* Destination Gaudi device ID */
+    int dmabuf_fd;              /* DMA-BUF file descriptor for real IPC */
+    uint64_t dmabuf_size;       /* Size of DMA-BUF region */
+    uint64_t dmabuf_offset;     /* Offset within DMA-BUF (Gaudi2+) */
 } uct_gaudi_ipc_md_handle_t;
 
 /**
@@ -56,6 +59,8 @@ typedef struct uct_gaudi_ipc_md {
     int                     *device_fds;        /* File descriptors for each device */
     uint64_t                *channel_map;       /* Channel mapping between devices */
     pthread_mutex_t          channel_lock;      /* Lock for channel operations */
+    int                      enhanced_dmabuf;   /* Enhanced DMA-BUF support (Gaudi2+) */
+    int                      primary_device_fd; /* Primary device for this MD */
 } uct_gaudi_ipc_md_t;
 
 
@@ -112,6 +117,8 @@ typedef struct {
     uint32_t                  src_device_id;   /* Source device in custom channel */
     uint32_t                  dst_device_id;   /* Destination device in custom channel */
     uint32_t                  channel_id;      /* Custom channel identifier */
+    int                       dmabuf_fd;       /* DMA-BUF file descriptor */
+    uint64_t                  imported_va;     /* Device VA from DMA-BUF import */
 } uct_gaudi_ipc_rkey_t;
 
 
@@ -132,5 +139,30 @@ ucs_status_t uct_gaudi_ipc_channel_copy(uct_gaudi_ipc_md_t *md,
                                         void *dst, void *src, size_t length);
 
 
+
+/* Direct Gaudi-to-Gaudi communication stub functions */
+ucs_status_t uct_gaudi_ipc_enable_scale_out(uct_gaudi_ipc_md_t *md,
+                                           uint32_t local_device_id,
+                                           uint32_t remote_device_id);
+
+ucs_status_t uct_gaudi_ipc_setup_hls_connection(uct_gaudi_ipc_md_t *md,
+                                               uint32_t peer_device_id,
+                                               uint32_t *connection_id);
+
+ucs_status_t uct_gaudi_ipc_direct_transfer(uct_gaudi_ipc_md_t *md,
+                                          uint32_t connection_id,
+                                          uint64_t src_device_addr,
+                                          uint64_t dst_device_addr,
+                                          size_t length);
+
+ucs_status_t uct_gaudi_ipc_query_topology(uct_gaudi_ipc_md_t *md,
+                                         uint32_t device_count,
+                                         uint32_t *device_ids,
+                                         uint32_t *topology_map);
+
+ucs_status_t uct_gaudi_ipc_setup_collective_ring(uct_gaudi_ipc_md_t *md,
+                                                uint32_t device_count,
+                                                uint32_t *device_ids,
+                                                uint32_t *ring_id);
 
 #endif

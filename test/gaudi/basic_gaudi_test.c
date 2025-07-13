@@ -52,11 +52,11 @@ static int test_gaudi_hardware(size_t test_size, int verbose)
     struct hlthunk_hw_ip_info hw_info;
     if (hlthunk_get_hw_ip_info(hlthunk_fd, &hw_info) == 0) {
         printf("✓ Hardware information:\n");
-        printf("  - Device ID: 0x%x\n", hw_info.device_id);
-        printf("  - DRAM base: 0x%lx\n", (unsigned long)hw_info.dram_base_address);
-        printf("  - DRAM size: %lu MB\n", hw_info.dram_size / (1024 * 1024));
-        printf("  - SRAM base: 0x%lx\n", hw_info.sram_base_address);
-        printf("  - SRAM size: %u KB\n", hw_info.sram_size / 1024);
+        //printf("  - Device ID: 0x%x\n", hw_info.device_id);
+       // printf("  - DRAM base: 0x%lx\n", (unsigned long)hw_info.dram_base_address);
+        //printf("  - DRAM size: %lu MB\n", hw_info.dram_size / (1024 * 1024));
+       // printf("  - SRAM base: 0x%lx\n", hw_info.sram_base_address);
+        //printf("  - SRAM size: %u KB\n", hw_info.sram_size / 1024);
         if (verbose) {
             printf("  - First interrupt ID: %d\n", hw_info.first_available_interrupt_id);
         }
