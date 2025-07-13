@@ -102,10 +102,56 @@ int main(int argc, char **argv) {
     worker_params.thread_mode = UCS_THREAD_MODE_SINGLE;
     ucp_worker_create(ucp_context, &worker_params, &worker);
 
-    // 2. Allocate Gaudi memory (use your gaudi_copy MD logic)
-    // For demo, just use malloc (replace with real Gaudi alloc in production)
-    void *gaudi_addr = malloc(size);
+    // 2. Allocate Gaudi memory using UCT Gaudi MD
+    uct_md_config_t *md_config = NULL;
+    uct_md_h gaudi_md = NULL;
+    uct_component_h *components = NULL;
+    unsigned num_components = 0;
+    ucs_status_t status;
+    void *gaudi_addr = NULL;
+    uct_mem_h memh_uct = NULL;
+
+    status = uct_query_components(&components, &num_components);
+    if (status != UCS_OK) {
+        printf("Failed to query UCX components\n");
+        return 1;
+    }
+    uct_component_h gaudi_comp = NULL;
+    for (unsigned i = 0; i < num_components; ++i) {
+        uct_component_attr_t attr = {.field_mask = UCT_COMPONENT_ATTR_FIELD_NAME};
+        status = uct_component_query(components[i], &attr);
+        if (status == UCS_OK && strcmp(attr.name, "gaudi_cpy") == 0) {
+            gaudi_comp = components[i];
+            break;
+        }
+    }
+    if (!gaudi_comp) {
+        printf("Gaudi component not found\n");
+        uct_release_component_list(components);
+        return 1;
+    }
+    status = uct_md_config_read(gaudi_comp, NULL, NULL, &md_config);
+    if (status != UCS_OK) {
+        printf("Failed to read Gaudi MD config\n");
+        uct_release_component_list(components);
+        return 1;
+    }
+    status = uct_md_open(gaudi_comp, NULL, md_config, &gaudi_md);
+    uct_config_release(md_config);
+    if (status != UCS_OK) {
+        printf("Failed to open Gaudi MD\n");
+        uct_release_component_list(components);
+        return 1;
+    }
+    status = uct_md_mem_alloc(gaudi_md, &size, &gaudi_addr, UCS_MEMORY_TYPE_GAUDI, UCS_SYS_DEVICE_ID_UNKNOWN, 0, "gaudi_buf", &memh_uct);
+    if (status != UCS_OK || !gaudi_addr) {
+        printf("Failed to allocate Gaudi memory\n");
+        uct_md_close(gaudi_md);
+        uct_release_component_list(components);
+        return 1;
+    }
     memset(gaudi_addr, is_server ? 0 : 0xAB, size);
+    uct_release_component_list(components);
 
     // 3. Register memory with UCP (for RMA)
     ucp_mem_map_params_t mem_params = {0};

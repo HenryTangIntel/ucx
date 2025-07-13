@@ -117,9 +117,11 @@ static ucs_status_t uct_gaudi_copy_iface_query(uct_iface_h tl_iface,
     iface_attr->cap.flags               = UCT_IFACE_FLAG_CONNECT_TO_IFACE |
                                           UCT_IFACE_FLAG_GET_ZCOPY |
                                           UCT_IFACE_FLAG_PUT_ZCOPY |
+                                          UCT_IFACE_FLAG_PUT_SHORT |
                                           UCT_IFACE_FLAG_PENDING;
 
     iface_attr->cap.put.max_zcopy       = SIZE_MAX;
+    iface_attr->cap.put.max_short       = 1024;
     iface_attr->cap.get.max_zcopy       = SIZE_MAX;
 
     iface_attr->latency                 = UCT_GAUDI_COPY_IFACE_LATENCY;
@@ -145,6 +147,7 @@ UCS_CLASS_DEFINE_NEW_FUNC(uct_gaudi_copy_iface_t, uct_iface_t, uct_md_h, uct_wor
 UCS_CLASS_DEFINE_DELETE_FUNC(uct_gaudi_copy_iface_t, uct_iface_t);
 
 static uct_iface_ops_t uct_gaudi_copy_iface_tl_ops = {
+    .ep_put_short             = uct_gaudi_copy_ep_put_short,
     .ep_put_zcopy             = uct_gaudi_copy_ep_put_zcopy,
     .ep_get_zcopy             = uct_gaudi_copy_ep_get_zcopy,
     .ep_pending_add           = (uct_ep_pending_add_func_t)ucs_empty_function_return_busy,

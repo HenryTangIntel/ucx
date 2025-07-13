@@ -107,3 +107,20 @@ UCS_PROFILE_FUNC(ucs_status_t, uct_gaudi_copy_ep_put_zcopy,
 
 }
 
+UCS_PROFILE_FUNC(ucs_status_t, uct_gaudi_copy_ep_put_short,
+                 (tl_ep, buffer, length, remote_addr, rkey),
+                 uct_ep_h tl_ep, const void *buffer, unsigned length,
+                 uint64_t remote_addr, uct_rkey_t rkey)
+{
+    ucs_status_t status;
+
+    status = uct_gaudi_copy_post_gaudi_async_copy(tl_ep, (void *)remote_addr,
+                                                (void *)buffer,
+                                                length, NULL);
+
+    UCT_TL_EP_STAT_OP(ucs_derived_of(tl_ep, uct_base_ep_t), PUT, SHORT,
+                      length);
+    ucs_trace_data("PUT_SHORT [ptr %p len %u] to 0x%" PRIx64, buffer,
+                   length, remote_addr);
+    return status;
+}

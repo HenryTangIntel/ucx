@@ -925,6 +925,9 @@ static int uct_gaudi_open_hlthunk_device(int device_index, ucs_sys_bus_id_t bus_
     if (fd < 0) {
         ucs_warn("Failed to open hlthunk device %d (bus_id=%s), Gaudi transport will be disabled", device_index, bus_id_str);
     }
+    else {
+        ucs_warn("Opened hlthunk device %d with bus ID %s", device_index, bus_id_str);
+    }
     return fd;
 }
 
@@ -985,7 +988,6 @@ uct_gaudi_copy_md_open(uct_component_t *component, const char *md_name,
     }
     
     /* Use default device index for now */
-    md->device_index = 0;
     ucs_debug("Using default Gaudi device index: %d", md->device_index);
     
     /* Get hardware information */

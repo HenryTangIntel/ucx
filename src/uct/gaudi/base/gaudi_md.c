@@ -194,8 +194,8 @@ uct_gaudi_base_query_md_resources(uct_component_t *component,
     }
 
     for (i = 0; i < num_gpus; ++i) {
-        snprintf(resources[i].md_name, sizeof(resources[i].md_name),
-                 "gaudi%d", i);
+        ucs_snprintf_safe(resources[i].md_name, sizeof(resources[i].md_name),
+                          "gaudi:%d", i);
     }
     *num_resources_p = num_gpus;
     *resources_p = resources;

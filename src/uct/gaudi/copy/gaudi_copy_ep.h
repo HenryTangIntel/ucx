@@ -27,6 +27,10 @@ ucs_status_t uct_gaudi_copy_ep_put_zcopy(uct_ep_h tl_ep,
                                         uint64_t remote_addr, uct_rkey_t rkey,
                                         uct_completion_t *comp);
 
+ucs_status_t uct_gaudi_copy_ep_put_short(uct_ep_h tl_ep, const void *buffer,
+                                         unsigned length, uint64_t remote_addr,
+                                         uct_rkey_t rkey);
+
 ucs_status_t uct_gaudi_copy_post_gaudi_async_copy(uct_ep_h tl_ep, void *dst, void *src, size_t length, uct_completion_t *comp);
 
 #endif
