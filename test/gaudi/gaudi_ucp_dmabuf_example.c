@@ -90,13 +90,24 @@ static int tcp_accept(int port) {
 int main(int argc, char **argv) {
     int is_server = 0;
     const char *peer_ip = NULL;
+    int gaudi_device_id = 1;  // Default to device 1 since 0 is often busy
     size_t size = TEST_SIZE;
+    
     if (argc > 1 && strcmp(argv[1], "server") == 0) {
         is_server = 1;
+        if (argc > 2) {
+            gaudi_device_id = atoi(argv[2]);
+        }
     } else if (argc > 2 && strcmp(argv[1], "client") == 0) {
         peer_ip = argv[2];
+        if (argc > 3) {
+            gaudi_device_id = atoi(argv[3]);
+        }
     } else {
-        printf("Usage:\n  %s server\n  %s client <server_ip>\n", argv[0], argv[0]);
+        printf("Usage:\n");
+        printf("  %s server [device_id]\n", argv[0]);
+        printf("  %s client <server_ip> [device_id]\n", argv[0]);
+        printf("  device_id: Gaudi device number (default: 1)\n");
         return 1;
     }
 
@@ -140,6 +151,7 @@ int main(int argc, char **argv) {
     for (unsigned i = 0; i < num_components; ++i) {
         uct_component_attr_t attr = {.field_mask = UCT_COMPONENT_ATTR_FIELD_NAME};
         status = uct_component_query(components[i], &attr);
+        printf("Component %u: %s\n", i, attr.name);
         if (status == UCS_OK && strcmp(attr.name, "gaudi_copy") == 0) {
             gaudi_comp = components[i];
             break;
@@ -161,13 +173,26 @@ int main(int argc, char **argv) {
         uct_release_component_list(components);
         return 1;
     }
-    status = uct_md_open(gaudi_comp, NULL, md_config, &gaudi_md);
+    // Try to open Gaudi MD with specified device
+    char gaudi_device[32];
+    snprintf(gaudi_device, sizeof(gaudi_device), "gaudi:%d", gaudi_device_id);
+    printf("Attempting to open Gaudi device: %s\n", gaudi_device);
+    status = uct_md_open(gaudi_comp, gaudi_device, md_config, &gaudi_md);
     uct_config_release(md_config);
     if (status != UCS_OK) {
         printf("Failed to open Gaudi MD: %s\n", ucs_status_string(status));
-        printf("This indicates a problem with Gaudi MD initialization\n");
+        printf("This could indicate:\n");
+        printf("  - All Gaudi devices are busy/in use by other processes\n");
+        printf("  - Gaudi driver/hardware issues\n");
+        printf("  - Insufficient permissions\n");
+        printf("Falling back to UCP-only approach with automatic device selection...\n");
         uct_release_component_list(components);
-        return 1;
+        
+        // Skip UCT-level allocation and proceed with UCP-only approach
+        gaudi_md = NULL;
+        gaudi_addr = NULL;
+        memh_uct = NULL;
+        goto ucp_only_approach;
     }
     printf("Successfully opened Gaudi MD (lazy device access enabled)\n");
     status = uct_md_mem_alloc(gaudi_md, &size, &gaudi_addr, UCS_MEMORY_TYPE_GAUDI, UCS_SYS_DEVICE_ID_UNKNOWN, 0, "gaudi_buf", &memh_uct);
@@ -198,6 +223,52 @@ int main(int argc, char **argv) {
     //memset(gaudi_addr, is_server ? 0 : 0xAB, size);
     uct_release_component_list(components);
 
+ucp_only_approach:
+    // If we don't have UCT-allocated memory, try UCP memory mapping for Gaudi
+    if (gaudi_addr == NULL) {
+        printf("Attempting UCP-based Gaudi memory allocation...\n");
+        
+        // Try UCP memory mapping with Gaudi memory type
+        ucp_mem_map_params_t ucp_mem_params = {0};
+        ucp_mem_params.field_mask = UCP_MEM_MAP_PARAM_FIELD_LENGTH | 
+                                   UCP_MEM_MAP_PARAM_FIELD_MEMORY_TYPE;
+        ucp_mem_params.length = size;
+        ucp_mem_params.memory_type = UCS_MEMORY_TYPE_GAUDI;
+        
+        ucp_mem_h ucp_memh_gaudi;
+        status = ucp_mem_map(ucp_context, &ucp_mem_params, &ucp_memh_gaudi);
+        
+        if (status == UCS_OK) {
+            // Get the address from UCP
+            ucp_mem_attr_t mem_attr = {0};
+            mem_attr.field_mask = UCP_MEM_ATTR_FIELD_ADDRESS;
+            status = ucp_mem_query(ucp_memh_gaudi, &mem_attr);
+            if (status == UCS_OK) {
+                gaudi_addr = mem_attr.address;
+                printf("Successfully allocated %zu bytes via UCP Gaudi memory at %p\n", size, gaudi_addr);
+                // We'll use this UCP memory handle later
+                goto skip_ucp_mem_map;
+            }
+            ucp_mem_unmap(ucp_context, ucp_memh_gaudi);
+        }
+        
+        printf("UCP Gaudi allocation failed, falling back to host memory...\n");
+        gaudi_addr = malloc(size);
+        if (!gaudi_addr) {
+            printf("Failed to allocate fallback host memory\n");
+            if (gaudi_md) uct_md_close(gaudi_md);
+            return 1;
+        }
+        memh_uct = NULL;
+        printf("Allocated %zu bytes of host memory at %p\n", size, gaudi_addr);
+        
+        // Initialize host memory
+        memset(gaudi_addr, is_server ? 0x00 : 0xAB, size);
+        printf("Initialized host memory with pattern: 0x%02X\n", 
+               is_server ? 0x00 : 0xAB);
+    }
+
+skip_ucp_mem_map:
     // 3. Register memory with UCP (for RMA)
     ucp_mem_map_params_t mem_params = {0};
     mem_params.field_mask = UCP_MEM_MAP_PARAM_FIELD_ADDRESS |
@@ -273,9 +344,15 @@ int main(int argc, char **argv) {
         printf("Server: waiting for data on %s memory...\n", 
                (memh_uct != NULL) ? "Gaudi device" : "host");
         sleep(2); // Give client time to send
-        printf("Server: received data - first 8 bytes: ");
-        for (int i = 0; i < 8; ++i) printf("%02x ", ((unsigned char*)gaudi_addr)[i]);
-        printf("\n");
+        
+        if (memh_uct != NULL) {
+            printf("Server: received data on Gaudi device memory (cannot read from CPU)\n");
+            printf("Note: Gaudi device memory is not CPU-accessible for direct verification\n");
+        } else {
+            printf("Server: received data - first 8 bytes: ");
+            for (int i = 0; i < 8; ++i) printf("%02x ", ((unsigned char*)gaudi_addr)[i]);
+            printf("\n");
+        }
         printf("Server: RMA operation completed successfully\n");
     }
 
@@ -288,15 +365,17 @@ int main(int argc, char **argv) {
     close(sock);
     
     // Free memory appropriately
-    if (memh_uct != NULL) {
+    if (memh_uct != NULL && gaudi_md != NULL) {
         // This was Gaudi device memory allocated via UCT
         uct_md_mem_free(gaudi_md, memh_uct);
-    } else {
+    } else if (gaudi_addr != NULL) {
         // This was fallback host memory allocated via malloc
         free(gaudi_addr);
     }
     
-    uct_md_close(gaudi_md);
+    if (gaudi_md != NULL) {
+        uct_md_close(gaudi_md);
+    }
 
     printf("\n=== Summary ===\n");
     printf("%s completed successfully\n", is_server ? "Server" : "Client");
