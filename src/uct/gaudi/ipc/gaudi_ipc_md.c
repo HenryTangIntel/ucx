@@ -109,7 +109,7 @@ uct_gaudi_ipc_mkey_pack(uct_md_h md, uct_mem_h tl_memh, void *address,
 {
     uct_gaudi_ipc_rkey_t *packed = mkey_buffer;
     uct_gaudi_ipc_memh_t *memh   = tl_memh;
-    uct_gaudi_ipc_md_t *gaudi_md = ucs_derived_of(md, uct_gaudi_ipc_md_t);
+    //uct_gaudi_ipc_md_t *gaudi_md = ucs_derived_of(md, uct_gaudi_ipc_md_t);
     uct_gaudi_ipc_lkey_t *key;
     ucs_status_t status;
 
@@ -152,8 +152,7 @@ UCS_PROFILE_FUNC(ucs_status_t, uct_gaudi_ipc_rkey_unpack,
 {
     uct_gaudi_ipc_rkey_t *packed   = (uct_gaudi_ipc_rkey_t *)rkey_buffer;
     uct_gaudi_ipc_unpacked_rkey_t *unpacked;
-    uct_gaudi_ipc_md_t *gaudi_md;
-    int rc;
+    //uct_gaudi_ipc_md_t *gaudi_md;
 
     unpacked = ucs_malloc(sizeof(*unpacked), "uct_gaudi_ipc_unpacked_rkey_t");
     if (NULL == unpacked) {
