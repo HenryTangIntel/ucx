@@ -229,7 +229,55 @@ The Gaudi implementation follows **UCX best practices** by managing device open/
 
 ## Detailed Improvement Recommendations
 
-### 1. Memory Registration Cache Implementation
+### 1. Correct IPC Memory Domain to Singleton Model
+
+#### **Priority: CRITICAL**
+#### **Impact: Correctness, Alignment**
+
+**Problem**: The `gaudi_ipc` transport is currently implemented with a multi-MD model, where a new MD is allocated for each Gaudi device. This is incorrect and inconsistent with the established design pattern for IPC transports in UCX. The correct approach, as seen in the `cuda_ipc` and `rocm_ipc` providers, is to use a single, shared MD instance (a singleton) for the entire node.
+
+**Solution**: Refactor the `uct_gaudi_ipc_md_open` function to return a pointer to a single static instance of `uct_gaudi_ipc_md_t`.
+
+#### Implementation Steps:
+
+##### A. Modify `uct_gaudi_ipc_md_open`
+```c
+// src/uct/gaudi/ipc/gaudi_ipc_md.c
+
+static ucs_status_t
+uct_gaudi_ipc_md_open(uct_component_t *component, const char *md_name,
+                      const uct_md_config_t *config, uct_md_h *md_p)
+{
+    static uct_gaudi_ipc_md_t uct_gaudi_ipc_md_singleton = {
+        .super.ops       = &md_ops, // Assuming md_ops is defined statically
+        .super.component = &uct_gaudi_ipc_component.super,
+    };
+    static ucs_status_t init_status = UCS_OK;
+    static pthread_once_t init_once = PTHREAD_ONCE_INIT;
+
+    /* Initialize the singleton MD only once */
+    pthread_once(&init_once, {
+        /* Add logic here to discover all devices and initialize
+           the shared resources within the singleton MD, e.g.,
+           the device_fds array and channel_map. */
+        init_status = uct_gaudi_ipc_detect_node_devices(&uct_gaudi_ipc_md_singleton);
+    });
+
+    if (init_status != UCS_OK) {
+        return init_status;
+    }
+
+    *md_p = &uct_gaudi_ipc_md_singleton.super;
+    return UCS_OK;
+}
+```
+
+#### **Expected Benefits:**
+-   **Correctness**: Aligns the `gaudi_ipc` transport with the proven and correct architecture for IPC providers in UCX.
+-   **Efficiency**: Avoids redundant work by initializing node-wide IPC resources only once.
+-   **Centralized Management**: Provides a single, logical place to manage the state and resources for all inter-device communication on the node.
+
+### 2. Memory Registration Cache Implementation
 
 #### **Priority: HIGH**
 #### **Impact: Performance, Scalability**
