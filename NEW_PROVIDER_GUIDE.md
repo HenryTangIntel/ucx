@@ -369,6 +369,15 @@ UCT_COMPONENT_DEFINE(uct_new_provider_component, "new_provider",
                      0)
 ```
 
+### Caching and Resource Management
+A key responsibility of a UCT provider is to manage underlying hardware resources efficiently. Many network and accelerator fabrics involve operations that are expensive to set up. A common pattern to ensure high performance is to cache the results of these operations.
+
+For example:
+- **Memory Registration/Pinning:** Operations that prepare a memory region for RDMA or direct GPU access (e.g., `ibv_reg_mr()`, `hsa_amd_memory_lock()`) have high latency. A provider should implement a memory registration cache to store and reuse these registrations. This avoids redundant setup costs for memory buffers that are communicated frequently.
+- **IPC Handle Attachment:** When dealing with Inter-Process Communication (IPC), attaching to a remote process's memory handle (e.g., `hsa_amd_ipc_memory_attach()`) is also a costly, one-time setup operation. Caching the resulting mapped address avoids this overhead on subsequent transfers to the same remote memory region.
+
+When implementing a new provider, always identify resource setup operations that can be cached and reused. This is critical for moving beyond functional correctness to achieve competitive performance.
+
 ## 8. Add Testing
 
 Create a new test file under `test/gtest/uct/` to validate your provider's functionality. You can use existing tests (e.g., `test_uct_self.cc`) as a starting point.
