@@ -28,6 +28,8 @@
 #include <uct/api/v2/uct_v2.h>
 #include <uct/gaudi/base/gaudi_iface.h>
 
+#include "base/uct_gaudi_device_manager.h"
+
 /* Habana Labs driver */
 #include <hlthunk.h>
 #include <drm/habanalabs_accel.h>
@@ -865,7 +867,7 @@ static void uct_gaudi_copy_md_close(uct_md_h uct_md) {
     }
 
     if (md->hlthunk_fd >= 0) {
-        hlthunk_close(md->hlthunk_fd);
+        uct_gaudi_device_put_handle(md->device_index);
     }
 
     ucs_free(md);
@@ -1049,12 +1051,13 @@ uct_gaudi_copy_md_open(uct_component_t *component, const char *md_name,
     md->reg_cost = ucs_linear_func_make(config->reg_cost, 0);
     
     /* Open hlthunk device */
-    md->hlthunk_fd = open_gaudi_device_by_index(md->device_index);
-    if (md->hlthunk_fd < 0) {
-        ucs_warn("Failed to open hlthunk device, Gaudi transport will be disabled");
+    status = uct_gaudi_device_get_handle(md->device_index, &md->hlthunk_fd);
+    if (status != UCS_OK) {
+        ucs_warn("Failed to get handle for Gaudi device %d, Gaudi transport will be disabled",
+                 md->device_index);
         ucs_recursive_spinlock_destroy(&md->memh_lock);
         ucs_free(md);
-        return UCS_ERR_NO_DEVICE;
+        return status;
     }
     
     /* Use default device index for now */

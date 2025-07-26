@@ -10,6 +10,7 @@
 #include "gaudi_ipc_cache.h"
 #include "gaudi_ipc.inl"
 #include <uct/gaudi/base/gaudi_dma.h>
+#include <uct/gaudi/base/uct_gaudi_device_manager.h>
 #include <string.h>
 #include <limits.h>
 #include <sys/ioctl.h>
@@ -410,7 +411,7 @@ static void uct_gaudi_ipc_md_close(uct_md_h md)
     if (gaudi_md->device_fds) {
         for (i = 0; i < gaudi_md->device_count; i++) {
             if (gaudi_md->device_fds[i] >= 0) {
-                hlthunk_close(gaudi_md->device_fds[i]);
+                uct_gaudi_device_put_handle(i);
             }
         }
         ucs_free(gaudi_md->device_fds);
@@ -451,8 +452,8 @@ ucs_status_t uct_gaudi_ipc_detect_node_devices(uct_gaudi_ipc_md_t *md)
     
     /* Open file descriptors for all devices in the node */
     for (i = 0; i < device_count; i++) {
-        fd = hlthunk_open(HLTHUNK_DEVICE_DONT_CARE, NULL);
-        if (fd < 0) {
+        status = uct_gaudi_device_get_handle(i, &fd);
+        if (status != UCS_OK) {
             ucs_debug("Failed to open Gaudi device %d for IPC", i);
             md->device_fds[i] = -1;
         } else {

@@ -123,3 +123,7 @@ UCX supports multiple transports and accelerators:
 - **CPU Architectures**: x86_64, ARM v8, PowerPC 8/9, RISC-V
 
 Transport selection happens at runtime based on available hardware and configuration.
+
+## Gaudi IPC Mechanisms
+
+- So the actual Gaudi device-to-device IPC uses native Gaudi channel mechanisms through hl-thunk, while DMA-BUF is reserved for integration with InfiniBand adapters and host memory systems.
