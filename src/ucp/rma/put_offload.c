@@ -131,7 +131,7 @@ ucp_proto_put_offload_update_remote_flush(ucp_ep_h ep,
     ep->ext->flush_sys_dev_map |= flush_sys_dev_mask;
 }
 
-static UCS_F_ALWAYS_INLINE ucs_status_t
+static UCS_F_INLINE_OPTIMIZED ucs_status_t
 ucp_proto_put_offload_bcopy_send_func(ucp_request_t *req,
                                       const ucp_proto_multi_lane_priv_t *lpriv,
                                       ucp_datatype_iter_t *next_iter,
@@ -338,5 +338,5 @@ ucp_proto_t ucp_put_offload_zcopy_proto = {
     .query    = ucp_proto_multi_query,
     .progress = {ucp_proto_put_offload_zcopy_progress},
     .abort    = ucp_proto_request_zcopy_abort,
-    .reset    = ucp_proto_request_zcopy_reset
+    .reset    = ucp_proto_offload_zcopy_reset
 };

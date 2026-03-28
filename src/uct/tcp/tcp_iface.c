@@ -13,6 +13,7 @@
 #include <ucs/async/async.h>
 #include <ucs/sys/netlink.h>
 #include <ucs/sys/string.h>
+#include <ucs/sys/sys.h>
 #include <ucs/config/types.h>
 #include <sys/socket.h>
 #include <sys/poll.h>
@@ -215,8 +216,9 @@ uct_tcp_iface_is_reachable_v2(const uct_iface_h tl_iface,
     tcp_dev_addr = (uct_tcp_device_addr_t*)params->device_addr;
     if (iface->config.ifaddr.ss_family != tcp_dev_addr->sa_family) {
         uct_iface_fill_info_str_buf(
-                params, "different address family %d vs %d",
-                iface->config.ifaddr.ss_family, tcp_dev_addr->sa_family);
+                params, "local %s remote %s",
+                ucs_sockaddr_address_family_str(iface->config.ifaddr.ss_family),
+                ucs_sockaddr_address_family_str(tcp_dev_addr->sa_family));
         return 0;
     }
 
@@ -227,18 +229,17 @@ uct_tcp_iface_is_reachable_v2(const uct_iface_h tl_iface,
             (const struct sockaddr*)&iface->config.ifaddr);
     if (is_remote_loopback != is_local_loopback) {
         uct_iface_fill_info_str_buf(params,
-                                    "incompatible loopback flags, "
-                                    "%d (local) vs %d (remote)",
-                                    is_local_loopback, is_remote_loopback);
+                                    "local %sloopback remote %sloopback",
+                                    is_local_loopback ? "" : "non-",
+                                    is_remote_loopback ? "" : "non-");
         return 0;
     }
 
     if (is_remote_loopback) {
+        /* Loopback device address contains local_addr_ns, not an inet address */
         local_addr_ns = (uct_iface_local_addr_ns_t*)(tcp_dev_addr + 1);
-        if (!uct_iface_local_is_reachable(local_addr_ns, UCS_SYS_NS_TYPE_NET,
-                                          params)) {
-            return 0;
-        }
+        return uct_iface_local_is_reachable(local_addr_ns, UCS_SYS_NS_TYPE_NET,
+                                            params);
     }
 
     if ((params->field_mask & UCT_IFACE_IS_REACHABLE_FIELD_SCOPE) &&
@@ -247,7 +248,7 @@ uct_tcp_iface_is_reachable_v2(const uct_iface_h tl_iface,
     }
 
     /* Check if the remote address is routable */
-    status = ucs_ifname_to_index(iface->if_name, &ndev_index);
+    status = ucs_ifname_to_ndev_index(iface->if_name, &ndev_index);
     if (status != UCS_OK) {
         uct_iface_fill_info_str_buf(
                     params, "failed to get interface index");
@@ -263,8 +264,8 @@ uct_tcp_iface_is_reachable_v2(const uct_iface_h tl_iface,
         return 0;
     }
 
-    if (!ucs_netlink_route_exists(ndev_index,
-                                  (const struct sockaddr *)&remote_addr)) {
+    if (!ucs_netlink_is_best_route(ndev_index,
+                                   (const struct sockaddr*)&remote_addr)) {
         uct_iface_fill_info_str_buf(
                     params, "no route to %s",
                     ucs_sockaddr_str((const struct sockaddr *)&remote_addr,
@@ -272,6 +273,11 @@ uct_tcp_iface_is_reachable_v2(const uct_iface_h tl_iface,
         return 0;
     }
 
+    /* This interface has the best route */
+    ucs_trace("tcp_iface %p (%s): this interface has the best route to %s",
+              iface, iface->if_name,
+              ucs_sockaddr_str((const struct sockaddr*)&remote_addr,
+                               remote_addr_str, UCS_SOCKADDR_STRING_LEN));
     return 1;
 }
 
@@ -666,10 +672,8 @@ static ucs_mpool_ops_t uct_tcp_mpool_ops = {
 };
 
 static uct_iface_internal_ops_t uct_tcp_iface_internal_ops = {
-    .iface_query_v2         = uct_iface_base_query_v2,
     .iface_estimate_perf    = uct_base_iface_estimate_perf,
     .iface_vfs_refresh      = (uct_iface_vfs_refresh_func_t)ucs_empty_function,
-    .iface_mem_element_pack = (uct_iface_mem_element_pack_func_t)ucs_empty_function_return_unsupported,
     .ep_query               = (uct_ep_query_func_t)ucs_empty_function_return_unsupported,
     .ep_invalidate          = (uct_ep_invalidate_func_t)ucs_empty_function_return_unsupported,
     .ep_connect_to_ep_v2    = uct_tcp_ep_connect_to_ep_v2,

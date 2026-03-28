@@ -24,7 +24,6 @@
 #define UCP_WIREUP_RMA_BW_TEST_MSG_SIZE    262144
 #define UCP_WIREUP_MAX_FLAGS_STRING_SIZE   50
 #define UCP_WIREUP_PATH_INDEX_UNDEFINED    UINT_MAX
-#define UCP_WIREUP_UCT_INFO_SIZE           256
 
 /* 6 for the string format constant length */
 #define UCP_WIREUP_TLS_INFO_SIZE       (UCP_WIREUP_UCT_INFO_SIZE + \
@@ -56,6 +55,7 @@ typedef struct {
     ucp_md_index_t       dst_md_index;
     ucs_sys_device_t     dst_sys_dev;
     ucp_lane_type_mask_t lane_types;
+    uint8_t              port_speed;
     size_t               seg_size;
     double               score[UCP_LANE_TYPE_LAST];
 } ucp_wireup_lane_desc_t;
@@ -729,6 +729,8 @@ static UCS_F_NOINLINE ucs_status_t ucp_wireup_add_lane_desc(
         ucp_lane_type_t lane_type, unsigned seg_size,
         ucp_wireup_select_context_t *select_ctx, int show_error)
 {
+    ucp_worker_h worker = select_params->ep->worker;
+    ucp_worker_iface_t *wiface;
     ucp_wireup_lane_desc_t *lane_desc;
     ucp_lane_type_t lane_type_iter;
     ucp_lane_index_t lane;
@@ -759,8 +761,8 @@ static UCS_F_NOINLINE ucs_status_t ucp_wireup_add_lane_desc(
 
             /* If adding same lane type and usage, expect same score */
             ucs_assertv_always(
-                    ucp_score_cmp(lane_desc->score[lane_type],
-                                  select_info->score) == 0,
+                    ucs_fp_compare(lane_desc->score[lane_type],
+                                   select_info->score) == 0,
                     "usage=%s lane_desc->score=%.2f select->score=%.2f",
                     ucp_lane_type_info[lane_type].short_name,
                     lane_desc->score[lane_type], select_info->score);
@@ -794,6 +796,8 @@ static UCS_F_NOINLINE ucs_status_t ucp_wireup_add_lane_desc(
     lane_desc->dst_md_index = dst_md_index;
     lane_desc->dst_sys_dev  = dst_sys_dev;
     lane_desc->lane_types   = UCS_BIT(lane_type);
+    wiface                  = ucp_worker_iface(worker, select_info->rsc_index);
+    lane_desc->port_speed   = (wiface != NULL) ? wiface->port_speed : 0;
     lane_desc->seg_size     = seg_size;
     for (lane_type_iter = UCP_LANE_TYPE_FIRST;
          lane_type_iter < UCP_LANE_TYPE_LAST;
@@ -844,8 +848,8 @@ static int ucp_wireup_compare_score(const void *elem1, const void *elem2,
     score1 = (*lane1 == UCP_NULL_LANE) ? 0.0 : lanes[*lane1].score[lane_type];
     score2 = (*lane2 == UCP_NULL_LANE) ? 0.0 : lanes[*lane2].score[lane_type];
 
-    /* reverse the value of ucp_score_cmp to sort scores in descending order */
-    return -ucp_score_cmp(score1, score2);
+    /* reverse the value of ucs_fp_compare to sort scores in descending order */
+    return -ucs_fp_compare(score1, score2);
 }
 
 static int ucp_wireup_compare_lane_am_bw_score(const void *elem1, const void *elem2,
@@ -901,7 +905,8 @@ static void ucp_wireup_memaccess_bitmap(ucp_context_h context,
 
     /* If a local or a remote key is needed, the memory domain has to be able
        to register. Otherwise, it must be able to access. */
-    ucp_context_memaccess_tl_bitmap(context, mem_type, md_reg_flags, tl_bitmap);
+    ucp_context_memaccess_tl_bitmap(context, UCS_BIT(mem_type), md_reg_flags,
+                                    tl_bitmap);
 }
 
 static UCS_F_NOINLINE ucs_status_t ucp_wireup_add_memaccess_lanes(
@@ -989,7 +994,7 @@ static UCS_F_NOINLINE ucs_status_t ucp_wireup_add_memaccess_lanes(
         if ((status != UCS_OK) ||
             /* - the selected transport is worse than
              *   the transport selected above */
-            (ucp_score_cmp(select_info.score, reg_score) <= 0)) {
+            (ucs_fp_compare(select_info.score, reg_score) <= 0)) {
             break;
         }
 
@@ -1573,7 +1578,7 @@ ucp_proto_select_info_score_compare(const void *e1, const void *e2,
     const ucp_wireup_select_info_t *info2 = e2;
     int score_cmp, key_cmp1, key_cmp2;
 
-    score_cmp = ucp_score_cmp(info1->score, info2->score);
+    score_cmp = ucs_fp_compare(info1->score, info2->score);
     if (score_cmp != 0) {
         return -score_cmp;
     }
@@ -2113,8 +2118,8 @@ ucp_wireup_add_rma_bw_lanes(const ucp_wireup_select_params_t *select_params,
         rkey_ptr_info.max_lanes                  = 1;
         rkey_ptr_info.criteria.local_md_flags    = UCT_MD_FLAG_REG;
 
-        ucp_context_memaccess_tl_bitmap(context, UCS_MEMORY_TYPE_HOST, 0,
-                                        &tl_bitmap);
+        ucp_context_memaccess_tl_bitmap(context, UCS_BIT(UCS_MEMORY_TYPE_HOST),
+                                        0, &tl_bitmap);
         ucp_wireup_add_bw_lanes_pairwise(select_params, &rkey_ptr_info,
                                          tl_bitmap, UCP_NULL_LANE, select_ctx,
                                          0);
@@ -2270,8 +2275,7 @@ ucp_wireup_add_tag_lane(const ucp_wireup_select_params_t *select_params,
                                          UINT64_MAX, UINT64_MAX, 0,
                                          &select_info);
     if ((status == UCS_OK) &&
-        (ucp_score_cmp(select_info.score,
-                       am_info->score) >= 0)) {
+        (ucs_fp_compare(select_info.score, am_info->score) >= 0)) {
         return ucp_wireup_add_lane(select_params, &select_info,
                                    UCP_LANE_TYPE_TAG, /* show error */ 1,
                                    select_ctx);
@@ -2501,8 +2505,7 @@ ucp_wireup_add_device_lanes(const ucp_wireup_select_params_t *select_params,
                                          mem_type_tl_bitmap, UCP_NULL_LANE,
                                          select_ctx, 0);
     if (!found_lane) {
-        ucs_error("could not find device lanes");
-        return UCS_ERR_UNREACHABLE;
+        ucs_debug("ep %p: could not find device lanes", select_params->ep);
     }
 
     return UCS_OK;
@@ -2696,6 +2699,7 @@ ucp_wireup_construct_lanes(const ucp_wireup_select_params_t *select_params,
         key->lanes[lane].dst_md_index = select_ctx->lane_descs[lane].dst_md_index;
         key->lanes[lane].dst_sys_dev  = select_ctx->lane_descs[lane].dst_sys_dev;
         key->lanes[lane].lane_types   = select_ctx->lane_descs[lane].lane_types;
+        key->lanes[lane].port_speed   = select_ctx->lane_descs[lane].port_speed;
         key->lanes[lane].seg_size     = select_ctx->lane_descs[lane].seg_size;
         key->lanes[lane].path_index   = ucp_wireup_default_path_index(
                                        select_ctx->lane_descs[lane].path_index);

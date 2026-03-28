@@ -667,9 +667,7 @@ uct_rc_mlx5_iface_is_reachable_v2(const uct_iface_h tl_iface,
     /* Check hardware tag matching compatibility */
     if ((iface_addr != NULL) &&
         ((remote_type = *(uint8_t*)iface_addr) != my_type)) {
-        uct_iface_fill_info_str_buf(params,
-                                    "incompatible hardware tag matching. "
-                                    "%s (local) vs %s (remote)",
+        uct_iface_fill_info_str_buf(params, "local %s remote %s",
                                     uct_rc_mlx5_iface_tm_type_str(my_type),
                                     uct_rc_mlx5_iface_tm_type_str(remote_type));
         return 0;
@@ -771,6 +769,8 @@ UCS_CLASS_INIT_FUNC(uct_rc_mlx5_iface_common_t, uct_iface_ops_t *tl_ops,
     self->tm.cmd_wq.super.super.type = UCT_IB_MLX5_OBJ_TYPE_LAST;
     init_attr->rx_hdr_len            = UCT_RC_MLX5_MP_ENABLED(self) ?
                                        0 : sizeof(uct_rc_mlx5_hdr_t);
+    init_attr->xport_hdr_len         = ucs_max(sizeof(uct_rc_hdr_t),
+                                               UCT_IB_RETH_LEN);
 
     UCS_CLASS_CALL_SUPER_INIT(uct_rc_iface_t, tl_ops, ops, tl_md, worker,
                               params, rc_config, init_attr);
@@ -977,10 +977,8 @@ static UCS_CLASS_DEFINE_DELETE_FUNC(uct_rc_mlx5_iface_t, uct_iface_t);
 static uct_rc_iface_ops_t uct_rc_mlx5_iface_ops = {
     .super = {
         .super = {
-            .iface_query_v2         = uct_iface_base_query_v2,
             .iface_estimate_perf    = uct_rc_iface_estimate_perf,
             .iface_vfs_refresh      = uct_rc_iface_vfs_refresh,
-            .iface_mem_element_pack = (uct_iface_mem_element_pack_func_t)ucs_empty_function_return_unsupported,
             .ep_query               = (uct_ep_query_func_t)ucs_empty_function_return_unsupported,
             .ep_invalidate          = uct_rc_mlx5_base_ep_invalidate,
             .ep_connect_to_ep_v2    = uct_rc_mlx5_ep_connect_to_ep_v2,

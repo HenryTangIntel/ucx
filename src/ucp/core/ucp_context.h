@@ -1,5 +1,5 @@
 /**
- * Copyright (c) NVIDIA CORPORATION & AFFILIATES, 2001-2015. ALL RIGHTS RESERVED.
+ * Copyright (c) NVIDIA CORPORATION & AFFILIATES, 2001-2026. ALL RIGHTS RESERVED.
  * Copyright (C) ARM Ltd. 2016.  ALL RIGHTS RESERVED.
  * Copyright (C) Advanced Micro Devices, Inc. 2019. ALL RIGHTS RESERVED.
  *
@@ -231,7 +231,7 @@ struct ucp_config {
     /** Array of device lists names to use.
      *  This array holds four lists - network devices, shared memory devices,
      *  acceleration devices and loop-back devices */
-    ucs_config_names_array_t               devices[UCT_DEVICE_TYPE_LAST];
+    ucs_config_allow_list_t                devices[UCT_DEVICE_TYPE_LAST];
     /** Array of transport names to use */
     ucs_config_allow_list_t                tls;
     /** Array of protocol names to use */
@@ -286,7 +286,7 @@ typedef struct ucp_tl_resource_desc {
  */
 typedef struct ucp_tl_alias {
     const char                    *alias;   /* Alias name */
-    const char*                   tls[10];   /* Transports which are selected by the alias */
+    const char*                   tls[11];  /* Transports which are selected by the alias */
 } ucp_tl_alias_t;
 
 
@@ -394,7 +394,8 @@ typedef struct ucp_context {
        exists. */
     ucp_md_index_t                dmabuf_mds[UCS_MEMORY_TYPE_LAST];
 
-    uint64_t                      mem_type_mask;            /* Supported mem type mask */
+    /* Mask of supported memory types */
+    uint64_t                      supported_mem_type_mask;
 
     ucp_tl_resource_desc_t        *tl_rscs;   /* Array of communication resources */
     ucp_tl_bitmap_t               tl_bitmap;  /* Cached map of tl resources used by workers.
@@ -459,6 +460,9 @@ typedef struct ucp_context {
 
         /* Progress wrapper enabled */
         int                       progress_wrapper_enabled;
+
+        /* Indicate whether tracing for used protocol selections is enabled */
+        int                       trace_used_proto_selections;
 
         struct {
            unsigned               count;
@@ -623,36 +627,12 @@ double ucp_tl_iface_latency_with_priority(ucp_context_h context,
                                           int is_prioritized_ep);
 
 /**
- * Calculate a small value to overcome float imprecision
- * between two float values
- */
-static UCS_F_ALWAYS_INLINE
-double ucp_calc_epsilon(double val1, double val2)
-{
-    return (val1 + val2) * (1e-6);
-}
-
-/**
- * Compare two scores and return:
- * - `-1` if score1 < score2
- * -  `0` if score1 == score2
- * -  `1` if score1 > score2
- */
-static UCS_F_ALWAYS_INLINE
-int ucp_score_cmp(double score1, double score2)
-{
-    double diff = score1 - score2;
-    return ((fabs(diff) < ucp_calc_epsilon(score1, score2)) ?
-            0 : ucs_signum(diff));
-}
-
-/**
  * Compare two scores taking into account priorities if scores are equal
  */
 static UCS_F_ALWAYS_INLINE
 int ucp_score_prio_cmp(double score1, int prio1, double score2, int prio2)
 {
-    int score_res = ucp_score_cmp(score1, score2);
+    int score_res = ucs_fp_compare(score1, score2);
 
     return score_res ? score_res : ucs_signum(prio1 - prio2);
 }
@@ -757,7 +737,7 @@ ucp_context_rndv_is_enabled(ucp_context_h context)
 }
 
 void ucp_context_memaccess_tl_bitmap(ucp_context_h context,
-                                     ucs_memory_type_t mem_type,
+                                     uint64_t mem_type_bitmap,
                                      uint64_t md_reg_flags,
                                      ucp_tl_bitmap_t *tl_bitmap);
 

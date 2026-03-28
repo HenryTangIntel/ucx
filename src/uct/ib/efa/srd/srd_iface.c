@@ -223,12 +223,9 @@ static void uct_srd_iface_handle_failure(uct_ib_iface_t *ib_iface, void *arg,
 
 static uct_ib_iface_ops_t uct_srd_iface_ops = {
     .super = {
-        .iface_query_v2        = uct_iface_base_query_v2,
         .iface_estimate_perf   = uct_ib_iface_estimate_perf,
         .iface_vfs_refresh     = (uct_iface_vfs_refresh_func_t)
             ucs_empty_function,
-        .iface_mem_element_pack = (uct_iface_mem_element_pack_func_t)
-            ucs_empty_function_return_unsupported,
         .ep_query              = (uct_ep_query_func_t)
             ucs_empty_function_return_unsupported,
         .ep_invalidate         = (uct_ep_invalidate_func_t)
@@ -476,6 +473,7 @@ static UCS_CLASS_INIT_FUNC(uct_srd_iface_t, uct_md_h md, uct_worker_h worker,
                                       sizeof(uct_ib_iface_recv_desc_t);
     init_attr.rx_hdr_len            = sizeof(uct_srd_hdr_t);
     init_attr.seg_size              = ucs_min(mtu, config->super.seg_size);
+    init_attr.xport_hdr_len         = UCT_IB_DETH_LEN + sizeof(uct_srd_hdr_t);
     init_attr.qp_type               = IBV_QPT_DRIVER;
     init_attr.dev_name              = params->mode.device.dev_name;
 
@@ -887,9 +885,7 @@ uct_srd_iface_query(uct_iface_h tl_iface, uct_iface_attr_t *iface_attr)
     int ret;
 
     /* Common parameters */
-    status = uct_ib_iface_query(&iface->super,
-                                UCT_IB_DETH_LEN + sizeof(uct_srd_hdr_t),
-                                iface_attr);
+    status = uct_ib_iface_query(&iface->super, iface_attr);
     if (status != UCS_OK) {
         return status;
     }

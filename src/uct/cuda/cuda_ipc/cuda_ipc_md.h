@@ -43,8 +43,8 @@ typedef struct uct_cuda_ipc_md_handle {
  * @brief cuda ipc MD descriptor
  */
 typedef struct uct_cuda_ipc_md {
-    uct_md_t                 super;   /**< Domain info */
-    int                      enable_mnnvl; /**< Multi-node NVLINK support status */
+    uct_md_t                 super;             /**< Domain info */
+    int                      enable_mnnvl;      /**< Multi-node NVLINK support status */
 } uct_cuda_ipc_md_t;
 
 
@@ -103,6 +103,8 @@ extern uct_cuda_ipc_component_t uct_cuda_ipc_component;
 typedef struct uct_cuda_ipc_md_config {
     uct_md_config_t          super;
     ucs_ternary_auto_value_t enable_mnnvl;
+    unsigned long            cache_max_regions; /**< Max cached IPC regions per peer */
+    size_t                   cache_max_size;    /**< Max total cached IPC mapping size */
 } uct_cuda_ipc_md_config_t;
 
 
@@ -111,6 +113,7 @@ typedef struct uct_cuda_ipc_md_config {
  */
 typedef struct {
     pid_t           pid;     /* PID as key to resolve peer_map hash */
+    ucs_sys_ns_t    pid_ns;  /* PID namespace */
     int             dev_num; /* GPU Device number */
     ucs_list_link_t list;
 } uct_cuda_ipc_memh_t;
@@ -139,9 +142,18 @@ typedef struct {
 } uct_cuda_ipc_rkey_t;
 
 
+/**
+ * @brief cuda ipc extended remote key
+ */
 typedef struct {
-    uct_cuda_ipc_rkey_t       super;
-    int                       stream_id;
+    uct_cuda_ipc_rkey_t super;
+    ucs_sys_ns_t        pid_ns; /* PID namespace */
+} uct_cuda_ipc_extended_rkey_t;
+
+
+typedef struct {
+    uct_cuda_ipc_extended_rkey_t super;
+    int                          stream_id;
 } uct_cuda_ipc_unpacked_rkey_t;
 
 #endif

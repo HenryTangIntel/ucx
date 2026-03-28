@@ -879,10 +879,8 @@ static uct_iface_ops_t uct_rdmacm_cm_iface_ops = {
 };
 
 static uct_iface_internal_ops_t uct_rdmacm_cm_iface_internal_ops = {
-    .iface_query_v2         = (uct_iface_query_v2_func_t)ucs_empty_function_return_unsupported,
     .iface_estimate_perf    = (uct_iface_estimate_perf_func_t)ucs_empty_function_return_unsupported,
     .iface_vfs_refresh      = (uct_iface_vfs_refresh_func_t)ucs_empty_function,
-    .iface_mem_element_pack = (uct_iface_mem_element_pack_func_t)ucs_empty_function_return_unsupported,
     .ep_query               = uct_rdmacm_ep_query,
     .ep_invalidate          = (uct_ep_invalidate_func_t)ucs_empty_function_return_unsupported,
     .ep_connect_to_ep_v2    = (uct_ep_connect_to_ep_v2_func_t)ucs_empty_function_return_unsupported,
@@ -944,7 +942,7 @@ UCS_CLASS_INIT_FUNC(uct_rdmacm_cm_t, uct_component_h component,
     self->ev_ch = rdma_create_event_channel();
     if (self->ev_ch == NULL) {
         status  = UCS_ERR_IO_ERROR;
-        if ((errno == ENODEV) || (errno == ENOENT)) {
+        if ((errno == ENODEV) || (errno == ENOENT) || (errno == EACCES)) {
             log_lvl = UCS_LOG_LEVEL_DIAG;
         } else {
             log_lvl = UCS_LOG_LEVEL_ERROR;

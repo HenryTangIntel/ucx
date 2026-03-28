@@ -74,7 +74,7 @@ static UCS_F_ALWAYS_INLINE ucs_status_t uct_cuda_ipc_ctx_rsc_get(
     CUresult result;
     uct_cuda_ctx_rsc_t *ctx_rsc;
 
-    result = uct_cuda_base_ctx_get_id(NULL, &ctx_id);
+    result = uct_cuda_ctx_get_id(NULL, &ctx_id);
     if (ucs_unlikely(result != CUDA_SUCCESS)) {
         UCT_CUDADRV_LOG(cuCtxGetId, UCS_LOG_LEVEL_ERROR, result);
         return UCS_ERR_IO_ERROR;
@@ -108,7 +108,6 @@ uct_cuda_ipc_post_cuda_async_copy(uct_ep_h tl_ep, uint64_t remote_addr,
     CUdeviceptr dst, src;
     CUcontext UCS_V_UNUSED cuda_context;
     CUstream *stream;
-    size_t offset;
 
     if (ucs_unlikely(0 == iov[0].length)) {
         ucs_trace_data("Zero length request: skip it");
@@ -121,8 +120,9 @@ uct_cuda_ipc_post_cuda_async_copy(uct_ep_h tl_ep, uint64_t remote_addr,
         return status;
     }
 
-    status = uct_cuda_ipc_map_memhandle(&key->super, cuda_device, &mapped_addr,
-                                        UCS_LOG_LEVEL_ERROR);
+    status = uct_cuda_ipc_get_remote_address(&key->super, remote_addr,
+                                             cuda_device, &mapped_rem_addr,
+                                             &mapped_addr);
     if (ucs_unlikely(status != UCS_OK)) {
         goto out;
     }
@@ -131,10 +131,6 @@ uct_cuda_ipc_post_cuda_async_copy(uct_ep_h tl_ep, uint64_t remote_addr,
     if (ucs_unlikely(status != UCS_OK)) {
         goto out;
     }
-
-    offset          = (uintptr_t)remote_addr - (uintptr_t)key->super.d_bptr;
-    mapped_rem_addr = (void *) ((uintptr_t) mapped_addr + offset);
-    ucs_assert(offset <= key->super.b_len);
 
     /* round-robin */
     q_desc = &ctx_rsc->queue_desc[key->stream_id % iface->config.max_streams];
@@ -184,8 +180,9 @@ uct_cuda_ipc_post_cuda_async_copy(uct_ep_h tl_ep, uint64_t remote_addr,
     ucs_queue_push(&q_desc->event_queue, &cuda_ipc_event->super.queue);
     cuda_ipc_event->super.comp  = comp;
     cuda_ipc_event->mapped_addr = mapped_addr;
-    cuda_ipc_event->d_bptr      = (uintptr_t)key->super.d_bptr;
-    cuda_ipc_event->pid         = key->super.pid;
+    cuda_ipc_event->d_bptr      = (uintptr_t)key->super.super.d_bptr;
+    cuda_ipc_event->pid         = key->super.super.pid;
+    cuda_ipc_event->pid_ns      = key->super.pid_ns;
     cuda_ipc_event->cuda_device = cuda_device;
     ucs_trace("cuMemcpyDtoDAsync issued :%p dst:%p, src:%p  len:%ld",
              cuda_ipc_event, (void *) dst, (void *) src, iov[0].length);

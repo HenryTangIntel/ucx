@@ -35,6 +35,10 @@ ExclusiveArch: aarch64 ppc64le x86_64
 Requires: %{?extra_deps}
 %endif
 
+# Legacy package cleanup
+Conflicts: ucx-knem < %{version}-%{release}
+Obsoletes: ucx-knem < %{version}-%{release}
+
 BuildRequires: automake autoconf libtool gcc-c++
 %if %{with cma}
 BuildRequires: glibc-devel >= 2.15
@@ -74,9 +78,6 @@ BuildRequires: valgrind-devel
 %endif
 %if %{with mad}
 BuildRequires: libibmad-devel libibumad-devel
-%endif
-%if %{with gda}
-BuildRequires: doca-sdk-gpunetio-devel
 %endif
 
 %description
@@ -166,7 +167,6 @@ rm -f %{buildroot}%{_libdir}/ucx/lib*.so
 
 %files devel
 %{_includedir}/uc*
-%{_includedir}/stubs
 %{_libdir}/lib*.so
 %{_libdir}/pkgconfig/ucx.pc
 %{_libdir}/pkgconfig/ucx-uct.pc
@@ -438,7 +438,6 @@ Provides oneAPI Level Zero (ZE) Runtime support for UCX.
 %package ib-mlx5-gda
 Requires: %{name}-cuda%{?_isa} = %{version}-%{release}
 Requires: %{name}-ib%{?_isa} = %{version}-%{release}
-Requires: doca-sdk-gpunetio-devel
 Summary: UCX GPU Direct Async support
 Group: System Environment/Libraries
 
@@ -452,6 +451,8 @@ with the host CPU.
 %endif
 
 %changelog
+* Wed Mar 18 2026 Yossi Itigin <yosefe@nvidia.com> 1.22.0-1
+- Bump version to 1.22.0
 * Mon Oct 20 2025 Leonid Genkin <lgenkin@nvidia.com> 1.21.0-1
 - Bump version to 1.21.0
 * Fri Apr 11 2025 Yossi Itigin <yosefe@nvidia.com> 1.20.0-1

@@ -341,7 +341,7 @@ uct_gga_mlx5_iface_query(uct_iface_h tl_iface, uct_iface_attr_t *iface_attr)
     size_t iface_mtu      = uct_ib_mtu_value(iface->super.config.path_mtu);
     ucs_status_t status;
 
-    status = uct_ib_iface_query(&iface->super, UCT_IB_RETH_LEN, iface_attr);
+    status = uct_ib_iface_query(&iface->super, iface_attr);
     if (status != UCS_OK) {
         return status;
     }
@@ -721,8 +721,7 @@ uct_gga_mlx5_iface_is_reachable_v2(const uct_iface_h tl_iface,
 
     if (!uct_gga_mlx5_iface_is_same_device(tl_iface, iface_addr)) {
         uct_iface_fill_info_str_buf(
-                params,
-                "different GUID 0x%"PRIx64" (local) vs 0x%"PRIx64" (remote)",
+                params, "GUID local 0x%" PRIx64 " remote 0x%" PRIx64,
                 be64toh(device->dev_attr.orig_attr.sys_image_guid),
                 be64toh(iface_addr->be_sys_image_guid));
         return 0;
@@ -748,10 +747,8 @@ uct_gga_mlx5_ep_is_connected(uct_ep_h tl_ep,
 static uct_rc_iface_ops_t uct_gga_mlx5_iface_ops = {
     .super = {
         .super = {
-            .iface_query_v2         = uct_iface_base_query_v2,
             .iface_estimate_perf    = uct_rc_iface_estimate_perf,
             .iface_vfs_refresh      = uct_rc_iface_vfs_refresh,
-            .iface_mem_element_pack = (uct_iface_mem_element_pack_func_t)ucs_empty_function_return_unsupported,
             .ep_query               = (uct_ep_query_func_t)ucs_empty_function,
             .ep_invalidate          = uct_rc_mlx5_base_ep_invalidate,
             .ep_connect_to_ep_v2    = uct_gga_mlx5_ep_connect_to_ep_v2,
@@ -792,6 +789,7 @@ static UCS_CLASS_INIT_FUNC(uct_gga_mlx5_iface_t,
     ucs_status_t status;
     uct_ib_mlx5_dp_ordering_t dp_ordering;
 
+    init_attr.xport_hdr_len         = UCT_IB_RETH_LEN;
     init_attr.qp_type               = IBV_QPT_RC;
     init_attr.cq_len[UCT_IB_DIR_TX] = config->super.tx_cq_len;
     init_attr.max_rd_atomic         = IBV_DEV_ATTR(&md->super.dev,
@@ -896,6 +894,7 @@ static uct_md_ops_t uct_mlx5_gga_md_ops = {
     .mkey_pack          = uct_ib_mlx5_gga_mkey_pack,
     .mem_attach         = uct_ib_mlx5_gga_mem_attach,
     .detect_memory_type = (uct_md_detect_memory_type_func_t)ucs_empty_function_return_unsupported,
+    .mem_elem_pack      = (uct_md_mem_elem_pack_func_t)ucs_empty_function_return_unsupported
 };
 
 static ucs_status_t
